@@ -26,7 +26,7 @@ popd
 # Install Mathlib
 echo "Installing Mathlib..."
 if [ ! -d "mathlib4" ]; then
-    git clone https://github.com/leanprover-community/mathlib4.git
+    git clone --branch ${LEAN_VERSION} --single-branch --depth 1 https://github.com/leanprover-community/mathlib4.git
 fi
 pushd mathlib4
 git checkout ${LEAN_VERSION}
