@@ -1,17 +1,16 @@
-import os
-from pathlib import Path
-
+from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
-os.environ["BASE"] = str(Path(__file__).resolve().parent.parent)
+load_dotenv("../.env")
 
 from fast_repl.main import app
 
 
 def test_repl_check_nat() -> None:
     with TestClient(app) as client:
-        resp = client.post("/repl/", json={"cmd": "#check Nat"})
+        resp = client.post("/repl", json={"cmd": "#check Nat"})
         assert resp.status_code == 200
+
         expected = {
             "messages": [
                 {
