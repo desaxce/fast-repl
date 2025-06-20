@@ -13,6 +13,6 @@ repos:
     hooks:
       - id: pytest-push
         name: pytest (pre-push)
-        entry: pytest -q tests --maxfail=1 --disable-warnings
+        entry: pytest -q . --maxfail=1 --disable-warnings
         language: system
         stages: [pre-push]
