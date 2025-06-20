@@ -7,3 +7,6 @@
 .pytest_cache
 
 __pycache__/
+
+repl/
+mathlib4/
