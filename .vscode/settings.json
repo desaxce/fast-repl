@@ -1,0 +1,14 @@
+{
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "always",
+      "source.fixAll": "always"
+    },
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+  "mypy-type-checker.args": [
+    "\"mypy-type-checker.args\" = \"--config-file=${workspaceFolder}/pyproject.toml\""
+  ],
+  "python.analysis.extraPaths": ["./src"]
+}
