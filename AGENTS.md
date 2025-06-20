@@ -3,7 +3,8 @@
 ## Dev Environment Tips
 - Start by copying the environment variables with `cp .env.template .env`
 - Use uv for most commands (add a dependency, run python) to ensure you have the proper dependencies: https://docs.astral.sh/uv/
-- Use `uv run pre-commit install` to have pre-commits run automatically (pyright + mypy)\
+- Use `uv run pre-commit install` to have pre-commits run automatically (pyright + mypy)
+- Install the pre-push hook `uv run pre-commit install --hook-type pre-push` to automatically run tests before pushing
 - Run `bash setup.sh` to install the elan suite with Lean 4 and sync of the `repl` and `mathlib4` repositories
 
 ## Testing Instructions
