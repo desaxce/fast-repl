@@ -16,3 +16,4 @@ repos:
         entry: uv run pytest -q . --maxfail=1 --disable-warnings
         language: system
         stages: [pre-push]
+        always_run: true
