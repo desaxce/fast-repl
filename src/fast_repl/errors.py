@@ -4,3 +4,7 @@ class LeanError(Exception):
 
 class ReplError(Exception):
     pass
+
+
+class PoolError(Exception):
+    pass

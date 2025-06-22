@@ -8,6 +8,15 @@ Server to check Lean proofs, via API.
 uv run python src/fast_repl/repl.py
 ```
 
+Environment variables configure the REPL pool:
+
+```
+REPL_POOL_MAX_REPLS   # maximum number of REPL processes
+REPL_POOL_MAX_REUSE   # how many times a REPL can be reused
+REPL_POOL_MEMORY_GB   # memory limit for each REPL
+REPL_POOL_INIT_REPLS  # number of REPLs created at startup
+```
+
 ## Contribute
 
 Run `uv run pre-commit install` so that typing/linting run on commit.

@@ -11,7 +11,13 @@ from typing import List, Literal, NotRequired, TypedDict
 from loguru import logger
 
 from fast_repl.errors import LeanError, ReplError
-from fast_repl.settings import LOG_LEVEL, PATH_TO_MATHLIB, PATH_TO_REPL
+from fast_repl.settings import (
+    LOG_LEVEL,
+    MAX_REUSE,
+    PATH_TO_MATHLIB,
+    PATH_TO_REPL,
+    REPL_MEMORY_GB,
+)
 
 
 class Command(TypedDict):
@@ -50,13 +56,26 @@ logger.add(sys.stderr, level=LOG_LEVEL)
 
 
 class Repl:
-    def __init__(self) -> None:
+    def __init__(self, *, max_memory_gb: int = REPL_MEMORY_GB, max_reuse: int = MAX_REUSE) -> None:
         # TODO: Change error file to PIPE
         self.proc: Process | None = None
         self.error_file = tempfile.TemporaryFile("w+")
+        self.use_count = 0
+        self.max_memory_bytes = max_memory_gb * 1024 * 1024 * 1024
+        self.max_reuse = max_reuse
+
+    @property
+    def exhausted(self) -> bool:
+        return self.use_count >= self.max_reuse
 
     async def start(self) -> None:
         # TODO: try/catch this bit and raise as REPL startup error.
+        def _preexec() -> None:
+            import resource
+
+            resource.setrlimit(resource.RLIMIT_AS, (self.max_memory_bytes, self.max_memory_bytes))
+            os.setsid()
+
         self.proc = await asyncio.create_subprocess_exec(
             "lake",
             "env",
@@ -66,7 +85,7 @@ class Repl:
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=self.error_file,
-            preexec_fn=os.setsid,
+            preexec_fn=_preexec,
         )
 
     async def send(self, command: Command) -> Response:
@@ -107,6 +126,7 @@ class Repl:
             raise LeanError(err)
 
         resp["time"] = elapsed
+        self.use_count += 1
         return resp
 
     async def close(self) -> None:

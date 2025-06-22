@@ -2,8 +2,9 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 
-from fast_repl.errors import LeanError
-from fast_repl.repl import Command, Repl
+from fast_repl.errors import LeanError, PoolError
+from fast_repl.repl import Command
+from fast_repl.repl_pool import ReplPoolManager
 
 # TODO: perform initialization if ReplPoolManager instead
 # @asynccontextmanager
@@ -18,6 +19,12 @@ from fast_repl.repl import Command, Repl
 # app = FastAPI(lifespan=lifespan)
 # repl = Repl()
 app = FastAPI()
+pool = ReplPoolManager()
+
+
+@app.on_event("startup")
+async def startup() -> None:
+    await pool.init_pool()
 
 
 # TODO: make it a health endpoint + add stats
@@ -28,11 +35,13 @@ def read_root() -> dict[str, str]:
 
 @app.post("/repl/")  # type: ignore
 async def send_repl(command: Command) -> Any:  # TODO: fix Any typing
-    repl = Repl()
     try:
-        await repl.start()
+        repl = await pool.get_repl()
+    except PoolError:
+        raise HTTPException(429, "REPL pool exhausted")
+    try:
         return await repl.send(command)
     except LeanError as e:
         raise HTTPException(500, str(e))
     finally:
-        await repl.close()
+        await pool.release_repl(repl)
