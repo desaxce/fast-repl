@@ -1,4 +1,11 @@
+import importlib
 import pytest
+from dotenv import load_dotenv
+
+from fast_repl import settings
+
+load_dotenv(".env")
+importlib.reload(settings)
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

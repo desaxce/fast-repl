@@ -5,7 +5,23 @@ Server to check Lean proofs, via API.
 ## Usage
 
 ```python
-uv run python src/fast_repl/repl.py
+uv run uvicorn src.fast_repl.main:app
+```
+
+And test with:
+```
+curl -X POST http://localhost:8000/repl/ \
+  -H "Content-Type: application/json" \
+  -d '{"cmd":"#check 1 + 1"}'
+```
+
+Environment variables to configure the REPL pool:
+
+```
+REPL_POOL_MAX_REPLS   # Maximum number of concurrently running REPLs
+REPL_POOL_MAX_REUSE   # Maximum number of times to reuse a REPL
+REPL_POOL_MEMORY_GB   # Memory limit for each REPL
+REPL_POOL_INIT_REPLS  # Number of REPLs created at startup
 ```
 
 ## Contribute

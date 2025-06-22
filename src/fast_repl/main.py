@@ -1,23 +1,25 @@
-from typing import Any
+from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI, HTTPException
+from fastapi.concurrency import asynccontextmanager
+from loguru import logger
 
-from fast_repl.errors import LeanError
-from fast_repl.repl import Command, Repl
-
-# TODO: perform initialization if ReplPoolManager instead
-# @asynccontextmanager
-# async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-#     await repl.start()
-#     logger.info("Lean REPL started")
-#     yield
-#     await repl.close()
-#     logger.info("Lean REPL closed")
+from fast_repl.errors import PoolError
+from fast_repl.repl import Command
+from fast_repl.repl_pool import ReplPoolManager
 
 
-# app = FastAPI(lifespan=lifespan)
-# repl = Repl()
+@asynccontextmanager  # type: ignore
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    await app.state.pool.init_pool()
+    logger.info("Initialized pool!")
+    yield
+    await app.state.pool.cleanup()
+    logger.info("Cleaned up pool!")
+
+
 app = FastAPI()
+app.state.pool = ReplPoolManager()
 
 
 # TODO: make it a health endpoint + add stats
@@ -28,11 +30,15 @@ def read_root() -> dict[str, str]:
 
 @app.post("/repl/")  # type: ignore
 async def send_repl(command: Command) -> Any:  # TODO: fix Any typing
-    repl = Repl()
     try:
-        await repl.start()
+        repl = await app.state.pool.get_repl()
+    except PoolError:
+        raise HTTPException(429, "REPL pool exhausted")
+
+    try:
         return await repl.send(command)
-    except LeanError as e:
-        raise HTTPException(500, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e)) from e
     finally:
-        await repl.close()
+        await app.state.pool.release_repl(repl)
+        logger.info("DONE releasing")
