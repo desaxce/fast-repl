@@ -5,7 +5,14 @@ Server to check Lean proofs, via API.
 ## Usage
 
 ```python
-uv run python src/fast_repl/repl.py
+uv run uvicorn src.fast_repl.main:app
+```
+
+And test with:
+```
+curl -X POST http://localhost:8000/repl/ \
+  -H "Content-Type: application/json" \
+  -d '{"cmd":"#check 1 + 1"}'
 ```
 
 Environment variables to configure the REPL pool:

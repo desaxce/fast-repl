@@ -4,6 +4,7 @@ import os
 import signal
 import sys
 import tempfile
+import uuid
 from asyncio.subprocess import Process
 from typing import List, Literal, NotRequired, TypedDict
 
@@ -56,13 +57,17 @@ logger.add(sys.stderr, level=LOG_LEVEL)
 
 
 class Repl:
-    def __init__(self, *, max_memory_gb: int = REPL_MEMORY_GB, max_reuse: int = MAX_REUSE) -> None:
+    def __init__(
+        self, *, max_memory_gb: int = REPL_MEMORY_GB, max_reuse: int = MAX_REUSE
+    ) -> None:
         # TODO: Change error file to PIPE
         self.proc: Process | None = None
         self.error_file = tempfile.TemporaryFile("w+")
         self.use_count = 0
         self.max_memory_bytes = max_memory_gb * 1024 * 1024 * 1024
         self.max_reuse = max_reuse
+        self.uuid = uuid.uuid4()
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     @property
     def exhausted(self) -> bool:
@@ -70,12 +75,20 @@ class Repl:
 
     async def start(self) -> None:
         # TODO: try/catch this bit and raise as REPL startup error.
-        def _preexec() -> None:
-            import resource
+        self._loop = asyncio.get_running_loop()
 
-            resource.setrlimit(resource.RLIMIT_AS, (self.max_memory_bytes, self.max_memory_bytes))
+        def _preexec() -> None:
+            try:
+                import resource
+
+                resource.setrlimit(
+                    resource.RLIMIT_AS, (self.max_memory_bytes, self.max_memory_bytes)
+                )
+            except Exception:
+                logger.error("Failed to set memory limit, continuing without it")
             os.setsid()
 
+        logger.debug("Starting REPL process with preexec function")
         self.proc = await asyncio.create_subprocess_exec(
             "lake",
             "env",
@@ -93,24 +106,41 @@ class Repl:
             # TODO: Don't make it a Lean error.
             raise LeanError("Process not started")
 
+        loop = self._loop or asyncio.get_running_loop()
+
         assert self.proc.stdin is not None, "stdin pipe not initialized"
         assert self.proc.stdout is not None, "stdout pipe not initialized"
 
+        logger.debug(f"Receiiving command: {command}")
         payload = (json.dumps(command, ensure_ascii=False) + "\n\n").encode("utf-8")
-        start = asyncio.get_event_loop().time()
+        start = loop.time()
+        print("Able to get time")
         try:
+            logger.debug("Writing to REPL stdin: {}", payload)
             self.proc.stdin.write(payload)
             await self.proc.stdin.drain()
         except BrokenPipeError:
+            logger.error("Broken pipe when writing to REPL stdin")
             raise LeanError("Lean process broken pipe")
+        except Exception as e:
+            logger.error("Failed to write to REPL stdin: {}", e)
+            raise LeanError("Failed to write to REPL stdin")
 
+        logger.debug("Sent command to REPL: {}", command)
         lines: list[bytes] = []
-        while True:
-            line = await self.proc.stdout.readline()
-            if not line.strip():
-                break
-            lines.append(line)
-        elapsed = asyncio.get_event_loop().time() - start
+        try:
+            while True:
+                line = await self.proc.stdout.readline()
+                logger.debug("Received line from REPL: {}", line)
+                if not line.strip():
+                    break
+                lines.append(line)
+        except Exception as e:
+            logger.error("Failed to read from REPL stdout: {}", e)
+            raise LeanError("Failed to read from REPL stdout")
+
+        logger.debug("Received lines from REPL: {}", lines)
+        elapsed = loop.time() - start
 
         raw = b"".join(lines)
         try:

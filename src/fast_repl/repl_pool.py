@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
+from loguru import logger
+
 from fast_repl.errors import PoolError
 from fast_repl.repl import Repl
 from fast_repl.settings import INIT_REPLS, MAX_REPLS, MAX_REUSE, REPL_MEMORY_GB
@@ -31,21 +33,27 @@ class ReplPoolManager:
         repl = Repl(max_memory_gb=self.memory_gb, max_reuse=self.max_reuse)
         await repl.start()
         await self._pool.put(repl)
+        logger.debug(f"Created a new REPL instance: {repl.uuid}")
         self._total += 1
 
     async def get_repl(self) -> Repl:
+        logger.debug("Requesting a REPL instance from the pool")
         if self._pool.empty():
             if self._total < self.max_repls:
                 await self._create_and_add()
             else:
                 raise PoolError("No available REPL")
-        return await self._pool.get()
+        repl: Repl = await self._pool.get()
+        logger.debug(f"Acquired a REPL instance: {repl.uuid}")
+        return repl
 
     async def release_repl(self, repl: Repl) -> None:
         if repl.exhausted:
+            logger.debug(f"REPL instance exhausted: {repl.uuid}, closing it")
             await repl.close()
             self._total -= 1
         else:
+            logger.debug(f"Returning REPL instance to the pool: {repl.uuid}")
             await self._pool.put(repl)
 
     async def cleanup(self) -> None:
