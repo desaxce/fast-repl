@@ -8,13 +8,13 @@ Server to check Lean proofs, via API.
 uv run python src/fast_repl/repl.py
 ```
 
-Environment variables configure the REPL pool:
+Environment variables to configure the REPL pool:
 
 ```
-REPL_POOL_MAX_REPLS   # maximum number of REPL processes
-REPL_POOL_MAX_REUSE   # how many times a REPL can be reused
-REPL_POOL_MEMORY_GB   # memory limit for each REPL
-REPL_POOL_INIT_REPLS  # number of REPLs created at startup
+REPL_POOL_MAX_REPLS   # Maximum number of concurrently running REPLs
+REPL_POOL_MAX_REUSE   # Maximum number of times to reuse a REPL
+REPL_POOL_MEMORY_GB   # Memory limit for each REPL
+REPL_POOL_INIT_REPLS  # Number of REPLs created at startup
 ```
 
 ## Contribute

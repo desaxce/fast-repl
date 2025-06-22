@@ -48,3 +48,9 @@ class ReplPoolManager:
         else:
             await self._pool.put(repl)
 
+    async def cleanup(self) -> None:
+        while not self._pool.empty():
+            repl = await self._pool.get()
+            await repl.close()
+            self._total -= 1
+        assert self._total == 0, "Pool cleanup did not empty the pool"
