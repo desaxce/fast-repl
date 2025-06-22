@@ -1,6 +1,7 @@
 {
   "typeCheckingMode": "strict",
   "include": ["src"],
-  "exclude": ["tests"],
+  "exclude": ["tests"], // Used by CLI
+  "ignore": ["tests"], // Used by Pylance in VS Code
   "reportMissingImports": true
 }
