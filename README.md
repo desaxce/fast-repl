@@ -11,6 +11,7 @@ uv run python src/fast_repl/repl.py
 ## Contribute
 
 Run `uv run pre-commit install` so that typing/linting run on commit.
+Run `uv run pre-commit install --install-hooks`
 And `uv run pre-commit install --hook-type pre-push` for tests to run on git push.
 
 ## Dependencies
