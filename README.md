@@ -1,6 +1,7 @@
 # Fast REPL
 
 Server to check Lean proofs, via API.
+Resource limits only work on Linux.
 
 ## Usage
 

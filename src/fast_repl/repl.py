@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import platform
 import signal
 import tempfile
 import uuid
@@ -72,15 +73,13 @@ class Repl:
         self._loop = asyncio.get_running_loop()
 
         def _preexec() -> None:
-            try:
-                import resource
+            import resource
 
+            if platform.system() != "Darwin":  # Only for Linux
                 resource.setrlimit(
                     resource.RLIMIT_AS, (self.max_memory_bytes, self.max_memory_bytes)
                 )
-            except Exception:
-                pass  # TODO: fix
-                # logger.error("Failed to set memory limit, continuing without it")
+
             os.setsid()
 
         self.proc = await asyncio.create_subprocess_exec(
