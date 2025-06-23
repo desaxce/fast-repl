@@ -1,21 +1,28 @@
 import os
-from pathlib import Path
 
-from dotenv import load_dotenv
+from pydantic import Field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-BASE_DIR = Path(__file__).parent
-load_dotenv(BASE_DIR / ".env")
 
-BASE = os.getenv("BASE", "/home/root")
-PATH_TO_REPL = os.getenv("PATH_TO_REPL", f"{BASE}/repl/.lake/build/bin/repl")
+class Settings(BaseSettings):  # type: ignore[misc]
+    BASE: str = Field(default_factory=os.getcwd)
+    repl_bin_path: str = ""
+    path_to_mathlib: str | None = None
+    LOG_LEVEL: str = "INFO"
+    MAX_REPLS: int = 2
+    MAX_REUSE: int = 1
+    REPL_MEMORY_GB: int = 8
+    INIT_REPLS: int = 1
 
-# TODO: Make mathlib optional (but default to true)
-PATH_TO_MATHLIB = os.getenv("PATH_TO_MATHLIB", f"{BASE}/mathlib4")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    @model_validator(mode="after")  # type: ignore
+    def set_defaults(self) -> "Settings":
+        if self.repl_bin_path == "":
+            self.repl_bin_path = self.BASE + "/repl/.lake/build/bin/repl"
+        if self.path_to_mathlib is None:
+            self.path_to_mathlib = self.BASE + "/mathlib4"
+        return self
 
-# Repl pool configuration
-MAX_REPLS = int(os.getenv("REPL_POOL_MAX_REPLS", "4"))
-MAX_REUSE = int(os.getenv("REPL_POOL_MAX_REUSE", "10"))
-REPL_MEMORY_GB = int(os.getenv("REPL_POOL_MEMORY_GB", "8"))
-INIT_REPLS = int(os.getenv("REPL_POOL_INIT_REPLS", "1"))
+
+settings = Settings()

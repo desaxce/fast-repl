@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import signal
-import sys
 import tempfile
 import uuid
 from asyncio.subprocess import Process
@@ -12,13 +11,7 @@ from typing import List, Literal, NotRequired, TypedDict
 from loguru import logger
 
 from fast_repl.errors import LeanError, ReplError
-from fast_repl.settings import (
-    LOG_LEVEL,
-    MAX_REUSE,
-    PATH_TO_MATHLIB,
-    PATH_TO_REPL,
-    REPL_MEMORY_GB,
-)
+from fast_repl.settings import settings
 
 
 class Command(TypedDict):
@@ -52,13 +45,12 @@ class Response(TypedDict, total=False):
     time: float
 
 
-logger.remove()
-logger.add(sys.stderr, level=LOG_LEVEL)
-
-
 class Repl:
     def __init__(
-        self, *, max_memory_gb: int = REPL_MEMORY_GB, max_reuse: int = MAX_REUSE
+        self,
+        *,
+        max_memory_gb: int = settings.REPL_MEMORY_GB,
+        max_reuse: int = settings.MAX_REUSE,
     ) -> None:
         # TODO: Change error file to PIPE
         self.proc: Process | None = None
@@ -68,6 +60,7 @@ class Repl:
         self.max_reuse = max_reuse
         self.uuid = uuid.uuid4()
         self._loop: asyncio.AbstractEventLoop | None = None
+        self.is_started = False
 
     @property
     def exhausted(self) -> bool:
@@ -75,6 +68,7 @@ class Repl:
 
     async def start(self) -> None:
         # TODO: try/catch this bit and raise as REPL startup error.
+
         self._loop = asyncio.get_running_loop()
 
         def _preexec() -> None:
@@ -85,15 +79,15 @@ class Repl:
                     resource.RLIMIT_AS, (self.max_memory_bytes, self.max_memory_bytes)
                 )
             except Exception:
-                logger.error("Failed to set memory limit, continuing without it")
+                pass  # TODO: fix
+                # logger.error("Failed to set memory limit, continuing without it")
             os.setsid()
 
-        logger.debug("Starting REPL process with preexec function")
         self.proc = await asyncio.create_subprocess_exec(
             "lake",
             "env",
-            PATH_TO_REPL,
-            cwd=PATH_TO_MATHLIB,
+            settings.repl_bin_path,
+            cwd=settings.path_to_mathlib,
             env=os.environ,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
@@ -101,8 +95,20 @@ class Repl:
             preexec_fn=_preexec,
         )
 
+        # Half a second gives time to the REPL to fail to start if path to REPL is wrong.
+        await asyncio.sleep(0.5)
+
+        if self.proc.returncode is not None:
+            # TODO: Show the error message / output.
+            raise ReplError(
+                f"Failed to start REPL, process returned with code {self.proc.returncode}"
+            )
+
+        logger.info(f"Started REPL {self.uuid.hex[:8]}")
+        self.is_started = True
+
     async def send(self, command: Command) -> Response:
-        if not self.proc:
+        if not self.proc or self.proc.returncode is not None:
             # TODO: Don't make it a Lean error.
             raise LeanError("Process not started")
 
@@ -111,12 +117,9 @@ class Repl:
         assert self.proc.stdin is not None, "stdin pipe not initialized"
         assert self.proc.stdout is not None, "stdout pipe not initialized"
 
-        logger.debug(f"Receiiving command: {command}")
         payload = (json.dumps(command, ensure_ascii=False) + "\n\n").encode("utf-8")
         start = loop.time()
-        print("Able to get time")
         try:
-            logger.debug("Writing to REPL stdin: {}", payload)
             self.proc.stdin.write(payload)
             await self.proc.stdin.drain()
         except BrokenPipeError:
@@ -126,12 +129,10 @@ class Repl:
             logger.error("Failed to write to REPL stdin: {}", e)
             raise LeanError("Failed to write to REPL stdin")
 
-        logger.debug("Sent command to REPL: {}", command)
         lines: list[bytes] = []
         try:
             while True:
                 line = await self.proc.stdout.readline()
-                logger.debug("Received line from REPL: {}", line)
                 if not line.strip():
                     break
                 lines.append(line)
@@ -139,7 +140,6 @@ class Repl:
             logger.error("Failed to read from REPL stdout: {}", e)
             raise LeanError("Failed to read from REPL stdout")
 
-        logger.debug("Received lines from REPL: {}", lines)
         elapsed = loop.time() - start
 
         raw = b"".join(lines)
@@ -151,6 +151,8 @@ class Repl:
 
         self.error_file.seek(0)
         err = self.error_file.read().strip()
+        self.error_file.truncate(0)
+        self.error_file.seek(0)
         if err:
             logger.error("Stderr: {}", err)
             raise LeanError(err)

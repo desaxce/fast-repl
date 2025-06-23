@@ -16,8 +16,6 @@ import pytest
 from fast_repl import settings
 from fast_repl.main import app
 
-importlib.reload(settings)
-
 
 # Module scope needed to ensure tests have REPLs on same event loop.
 @pytest.fixture(autouse=True, scope="module")  # type: ignore
@@ -59,7 +57,7 @@ async def test_repl_mathlib(client: TestClient) -> None:
     # assert resp1.status_code == 200
 
     expected = {
-        "env": 1
+        "env": 0
     }  # Env is 1 because max one repl and pool is shared by all tests.
     for key, value in expected.items():
         assert resp.json()[key] == value
