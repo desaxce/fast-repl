@@ -8,6 +8,8 @@ import uuid
 from asyncio.subprocess import Process
 from typing import List, Literal, NotRequired, TypedDict
 
+import psutil
+
 # TODO: Check alternatives to loguru add json nice print
 from loguru import logger
 
@@ -44,6 +46,7 @@ class Response(TypedDict, total=False):
     messages: List[_Message]
     env: int
     time: float
+    cpu_max: float
 
 
 class Repl:
@@ -61,6 +64,10 @@ class Repl:
         self.max_reuse = max_reuse
         self.uuid = uuid.uuid4()
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._cpu_max: float = 0.0
+        # TODO: Implement cpu at repl level
+        self._cpu_task: asyncio.Task[None] | None = None
+        self._ps_proc: psutil.Process | None = None
 
     @property
     def exhausted(self) -> bool:
@@ -99,7 +106,21 @@ class Repl:
             preexec_fn=_preexec,
         )
 
+        self._ps_proc = psutil.Process(self.proc.pid)
+        self._ps_proc.cpu_percent(None)
+        self._cpu_max = 0.0
+        self._cpu_task = self._loop.create_task(self._cpu_monitor())
+
         logger.info(f"Started REPL {self.uuid.hex[:8]}")
+
+    async def _cpu_monitor(self) -> None:
+        while self.is_running and self._ps_proc:
+            await asyncio.sleep(1)
+            usage = self._ps_proc.cpu_percent(None)
+            for child in self._ps_proc.children(recursive=True):
+                usage += child.cpu_percent(None)
+
+            self._cpu_max = max(self._cpu_max, usage)
 
     @property
     def is_running(self) -> bool:
@@ -108,6 +129,7 @@ class Repl:
         return self.proc.returncode is None
 
     async def send(self, command: Command) -> Response:
+        self._cpu_max = 0.0
         if not self.proc or self.proc.returncode is not None:
             # TODO: Don't make it a Lean error.
             raise LeanError("Process not started")
@@ -159,6 +181,7 @@ class Repl:
             raise LeanError(err)
 
         resp["time"] = elapsed
+        resp["cpu_max"] = self._cpu_max
         self.use_count += 1
         return resp
 
@@ -168,3 +191,5 @@ class Repl:
             self.proc.stdin.close()
             os.killpg(os.getpgid(self.proc.pid), signal.SIGKILL)
             await self.proc.wait()
+            if self._cpu_task:
+                self._cpu_task.cancel()
