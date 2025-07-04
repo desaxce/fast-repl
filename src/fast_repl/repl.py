@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import platform
 import signal
 import tempfile
 import uuid
@@ -71,12 +72,18 @@ class Repl:
         self._loop = asyncio.get_running_loop()
 
         def _preexec() -> None:
-            # import resource
+            import resource
 
-            # if platform.system() != "Darwin":  # Only for Linux
-            #     resource.setrlimit(
-            #         resource.RLIMIT_AS, (self.max_memory_bytes, self.max_memory_bytes)
-            #     )
+            # Memory limit
+            if platform.system() != "Darwin":  # Only for Linux
+                resource.setrlimit(
+                    resource.RLIMIT_AS, (self.max_memory_bytes, self.max_memory_bytes)
+                )
+
+            # No CPU limit on REPL, most Lean proofs take up to one core.
+            # The adjustment variable is the maximum number of REPLs / timeout.
+            # See https://github.com/leanprover-community/repl/issues/91
+            # TODO: Run CPU usage stats on Goedel.
 
             os.setsid()
 
