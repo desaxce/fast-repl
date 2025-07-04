@@ -37,6 +37,9 @@ markers = [
 strict = true
 files = ["src"]
 ignore_missing_imports = true
+disable_error_code = [
+    "unused-ignore"
+]
 
 # TODO: Think about what it means to have this lib packaged: Docker vs. pypi vs. cli?
 [build-system]

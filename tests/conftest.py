@@ -1,11 +1,26 @@
 import importlib
+
 import pytest
 from dotenv import load_dotenv
+from fastapi.testclient import TestClient
 
-from fast_repl import settings
+from fast_repl.main import create_app
+from fast_repl.settings import Settings
 
-load_dotenv(".env")
-importlib.reload(settings)
+
+@pytest.fixture(
+    params=[
+        {"MAX_REPLS": 5, "MAX_REUSE": 10},
+    ]
+)  # type: ignore
+def client(request):
+    overrides = getattr(request, "param", {})
+    s = Settings(_env_file=None)
+    for k, v in overrides.items():
+        setattr(s, k, v)
+    app = create_app(s)
+    with TestClient(app) as c:
+        yield c
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -24,11 +39,11 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session")  # type: ignore
 def perf_rows(request: pytest.FixtureRequest) -> int:
     return int(request.config.getoption("--perf-rows"))
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session")  # type: ignore
 def perf_shuffle(request: pytest.FixtureRequest) -> bool:
     return bool(request.config.getoption("--perf-shuffle"))

@@ -128,6 +128,16 @@ class Repl:
             return False
         return self.proc.returncode is None
 
+    async def send_timeout(self, command: Command, timeout: float) -> Response:
+        try:
+            return await asyncio.wait_for(self.send(command), timeout=timeout)
+        except TimeoutError:
+            logger.error("Lean REPL command timed out")
+            raise TimeoutError("Lean REPL command timed out")
+        except LeanError as e:
+            logger.error("Lean REPL error: {}", e)
+            raise e
+
     async def send(self, command: Command) -> Response:
         self._cpu_max = 0.0
         if not self.proc or self.proc.returncode is not None:

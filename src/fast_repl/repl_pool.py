@@ -18,7 +18,7 @@ class ReplPoolManager:
         memory_gb: int = settings.REPL_MEMORY_GB,
     ) -> None:
         logger.info(
-            "Initializing REPL pool with max_repls={}, max_reuse={}, memory_gb={}",
+            "Initializing REPL pool with: \n\tMAX_REPLS={}, \n\tMAX_REUSE={}, \n\tREPL_MEMORY_GB={}",
             max_repls,
             max_reuse,
             memory_gb,
@@ -74,6 +74,17 @@ class ReplPoolManager:
                 f"Pool is empty, total REPLs in pool: {self._pool.qsize()}, max_repls: {self.max_repls}"
             )
             raise PoolError("No available REPL")
+
+    async def destroy_repl(self, repl: Repl) -> None:
+        uuid = repl.uuid
+        logger.info(f"Destroying REPL {uuid.hex[:8]}")
+        await repl.close()
+        del repl
+        logger.info(f"Destroyed REPL {uuid.hex[:8]}")
+        # Recreate a new REPL instance to maintain pool size
+        await self._pool.put(
+            Repl(max_memory_gb=self.memory_gb, max_reuse=self.max_reuse)
+        )
 
     async def release_repl(self, repl: Repl) -> None:
         if repl.exhausted:
