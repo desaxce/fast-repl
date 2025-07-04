@@ -17,6 +17,7 @@ from fast_repl.repl_pool import ReplPoolManager
 
 app = FastAPI(logger=logger)
 pool: ReplPoolManager = ReplPoolManager()
+# TODO: make fastapi server fail to launch if repl can't initialize
 
 
 # TODO: make it a health endpoint + add stats
@@ -29,7 +30,7 @@ def read_root() -> dict[str, str]:
 async def send_repl(command: Command) -> Any:  # TODO: fix Any typing
     try:
         repl: Repl = await pool.get_repl()
-        if not repl.is_started:
+        if not repl.is_running:
             try:
                 await repl.start()  # here add header
             except ReplError:

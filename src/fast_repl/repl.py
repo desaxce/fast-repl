@@ -1,7 +1,6 @@
 import asyncio
 import json
 import os
-import platform
 import signal
 import tempfile
 import uuid
@@ -61,7 +60,6 @@ class Repl:
         self.max_reuse = max_reuse
         self.uuid = uuid.uuid4()
         self._loop: asyncio.AbstractEventLoop | None = None
-        self.is_started = False
 
     @property
     def exhausted(self) -> bool:
@@ -73,12 +71,12 @@ class Repl:
         self._loop = asyncio.get_running_loop()
 
         def _preexec() -> None:
-            import resource
+            # import resource
 
-            if platform.system() != "Darwin":  # Only for Linux
-                resource.setrlimit(
-                    resource.RLIMIT_AS, (self.max_memory_bytes, self.max_memory_bytes)
-                )
+            # if platform.system() != "Darwin":  # Only for Linux
+            #     resource.setrlimit(
+            #         resource.RLIMIT_AS, (self.max_memory_bytes, self.max_memory_bytes)
+            #     )
 
             os.setsid()
 
@@ -94,17 +92,13 @@ class Repl:
             preexec_fn=_preexec,
         )
 
-        # Half a second gives time to the REPL to fail to start if path to REPL is wrong.
-        await asyncio.sleep(0.5)
-
-        if self.proc.returncode is not None:
-            # TODO: Show the error message / output.
-            raise ReplError(
-                f"Failed to start REPL, process returned with code {self.proc.returncode}"
-            )
-
         logger.info(f"Started REPL {self.uuid.hex[:8]}")
-        self.is_started = True
+
+    @property
+    def is_running(self) -> bool:
+        if not self.proc:
+            return False
+        return self.proc.returncode is None
 
     async def send(self, command: Command) -> Response:
         if not self.proc or self.proc.returncode is not None:
@@ -137,6 +131,7 @@ class Repl:
                 lines.append(line)
         except Exception as e:
             logger.error("Failed to read from REPL stdout: {}", e)
+            # TODO: When raw = b'', REPL process likely dead.
             raise LeanError("Failed to read from REPL stdout")
 
         elapsed = loop.time() - start
