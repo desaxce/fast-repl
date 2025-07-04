@@ -23,7 +23,7 @@ from fast_repl.settings import settings
 async def test_proof_dataset_benchmark(perf_rows: int, perf_shuffle: bool) -> None:
     ds = load_dataset(
         "Goedel-LM/Lean-workbook-proofs", split="train"
-    )  # TODO: check which lean version is this?
+    )  # TODO: check which lean version is this? It's 4.9
     if perf_shuffle:
         ds = ds.shuffle(seed=0)
     if perf_rows:

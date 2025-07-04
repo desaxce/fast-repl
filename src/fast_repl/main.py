@@ -17,7 +17,6 @@ from fast_repl.repl_pool import ReplPoolManager
 
 app = FastAPI(logger=logger)
 pool: ReplPoolManager = ReplPoolManager()
-# TODO: make fastapi server fail to launch if repl can't initialize
 
 
 # TODO: make it a health endpoint + add stats
