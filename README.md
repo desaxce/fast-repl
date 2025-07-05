@@ -9,6 +9,15 @@ Resource limits only work on Linux.
 uv run uvicorn src.fast_repl.main:app
 ```
 
+```
+export API_KEY="secret123"
+docker-compose up -d
+curl -H "Authorization: Bearer secret123" \
+     -X POST http://localhost:8000/api/check \
+     -d '{"snippets":[{"id":"1","code":"..." }],"timeout":5}' \
+     -H "Content-Type: application/json"
+```
+
 Check docs at http://localhost:8000/docs or http://localhost:8000/redoc.
 
 And test with:

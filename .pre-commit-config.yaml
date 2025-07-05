@@ -20,7 +20,7 @@ repos:
       - id: mypy
         args: ["--config-file=pyproject.toml"]
         additional_dependencies:
-          - "pydantic[mypy]"
+          - "pydantic[mypy]" # TODO: add constraint on version like in pyproject.toml
   - repo: local
     hooks:
       - id: pytest-push

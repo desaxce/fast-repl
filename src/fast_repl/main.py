@@ -16,6 +16,10 @@ from fast_repl.settings import Settings
 #     await app.state.pool.cleanup()
 #     logger.info("Cleaned up pool!")
 
+# @app.on_event("startup")
+# def on_startup():
+#     seed_key()
+
 
 def create_app(settings: Settings) -> FastAPI:
     app = FastAPI(
@@ -67,7 +71,12 @@ def create_app(settings: Settings) -> FastAPI:
             await pool.release_repl(repl)
             return result
 
-    app.include_router(router)
+    app.include_router(
+        router,
+        # prefix="/api",
+        #    dependencies=[Depends(require_key)],
+        tags=["check"],
+    )
     return app
 
 

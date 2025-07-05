@@ -1,0 +1,11 @@
+services:
+  api:
+    image: fast-repl:latest
+    ports:
+      - 8000:8000
+    environment:
+      - API_KEY=${API_KEY}
+    volumes:
+      - ./data:/app/data      # for a small SQLite file
+    command: uvicorn app.main:app --host 0.0.0.0
+# TODO: start pg or sqllite here as separate service?
