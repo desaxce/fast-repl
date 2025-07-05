@@ -43,7 +43,7 @@ async def test_proof_dataset_benchmark(perf_rows: int, perf_shuffle: bool) -> No
         async def run_item(item: dict[str, str]) -> None:
             async with semaphore:
                 proof = item["full_proof"]
-                resp = await client.post("/repl", json={"cmd": proof})
+                resp = await client.post("check", json={"cmd": proof})
                 assert resp.status_code == 200
                 data = resp.json()
                 assert "time" in data

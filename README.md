@@ -11,7 +11,7 @@ uv run uvicorn src.fast_repl.main:app
 
 And test with:
 ```
-curl -X POST http://localhost:8000/repl/ \
+curl -X POST http://localhost:8000/api/check/ \
   -H "Content-Type: application/json" \
   -d '{"cmd":"#check 1 + 1"}'
 ```

@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, FastAPI, HTTPException
 from loguru import logger
 
 from fast_repl.errors import PoolError, ReplError
@@ -18,20 +18,22 @@ from fast_repl.settings import Settings
 
 
 def create_app(settings: Settings) -> FastAPI:
-    app = FastAPI(logger=logger)
+    app = FastAPI(logger=logger)  # TODO: Make logger aligned on timestamp.
     pool: ReplPoolManager = ReplPoolManager(
         max_repls=settings.MAX_REPLS,
         max_reuse=settings.MAX_REUSE,
         memory_gb=settings.REPL_MEMORY_GB,
     )
 
+    router = APIRouter(prefix="/api")
+
     # TODO: make it a health endpoint + add stats
-    @app.get("/")  # type: ignore
+    @router.get("/")  # type: ignore
     def read_root() -> dict[str, str]:  # type: ignore[reportUnusedFunction]
         return {"message": "Hello, World!"}
 
-    @app.post("/repl")  # type: ignore
-    async def send_repl(  # type: ignore[reportUnusedFunction]
+    @router.post("/check")  # type: ignore
+    async def check(  # type: ignore[reportUnusedFunction]
         command: Command, timeout: float = 10
     ) -> Any:  # TODO: fix Any typing
         try:
@@ -56,6 +58,7 @@ def create_app(settings: Settings) -> FastAPI:
             await pool.release_repl(repl)
             return result
 
+    app.include_router(router)
     return app
 
 

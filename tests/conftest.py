@@ -19,7 +19,7 @@ def client(request):
     for k, v in overrides.items():
         setattr(s, k, v)
     app = create_app(s)
-    with TestClient(app) as c:
+    with TestClient(app, base_url="http://testserver/api") as c:
         yield c
 
 
