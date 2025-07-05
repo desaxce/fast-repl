@@ -18,10 +18,9 @@ repos:
     rev: v1.5.1
     hooks:
       - id: mypy
-        language: system
         args: ["--config-file=pyproject.toml"]
-        # additional_dependencies:
-        #   - "pydantic>=1.10.4"
+        additional_dependencies:
+          - "pydantic[mypy]"
   - repo: local
     hooks:
       - id: pytest-push
