@@ -4,9 +4,9 @@ import asyncio
 
 from loguru import logger
 
-from fast_repl.errors import PoolError
-from fast_repl.repl import Repl
-from fast_repl.settings import settings
+from app.errors import PoolError
+from app.repl import Repl
+from app.settings import settings
 
 
 class ReplPoolManager:

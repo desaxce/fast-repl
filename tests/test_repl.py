@@ -2,7 +2,7 @@ from typing import AsyncGenerator
 
 import pytest
 
-from fast_repl.repl import Repl
+from app.repl import Repl
 
 
 @pytest.fixture  # type: ignore

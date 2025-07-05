@@ -3,10 +3,10 @@ from typing import Any
 from fastapi import APIRouter, FastAPI, HTTPException
 from loguru import logger
 
-from fast_repl.errors import PoolError, ReplError
-from fast_repl.repl import Command, Repl, Response
-from fast_repl.repl_pool import ReplPoolManager
-from fast_repl.settings import Settings
+from app.errors import PoolError, ReplError
+from app.repl import Command, Repl, Response
+from app.repl_pool import ReplPoolManager
+from app.settings import Settings
 
 # @asynccontextmanager  # type: ignore
 # async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:

@@ -1,7 +1,7 @@
 {
   "typeCheckingMode": "strict",
-  "include": ["src"],
+  "include": ["app"],
   "exclude": ["tests"], // Used by CLI
   "ignore": ["tests"], // Used by Pylance in VS Code
-  "reportMissingImports": true
+  "reportMissingImports": true // TODO: add recommended extensions
 }

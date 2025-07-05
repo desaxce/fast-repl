@@ -13,8 +13,8 @@ import psutil
 # TODO: Check alternatives to loguru add json nice print
 from loguru import logger
 
-from fast_repl.errors import LeanError, ReplError
-from fast_repl.settings import settings
+from app.errors import LeanError, ReplError
+from app.settings import settings
 
 
 class Command(TypedDict):

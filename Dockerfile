@@ -49,7 +49,7 @@ WORKDIR /root/fast-repl
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH=/root/.local/bin:$PATH
 
-COPY src src
+COPY app app 
 COPY .python-version .python-version
 COPY pyproject.toml pyproject.toml
 COPY uv.lock uv.lock
@@ -63,4 +63,4 @@ RUN pip install --no-cache-dir -e .
 
 EXPOSE 80
 
-CMD ["uvicorn", "--host", "0.0.0.0", "--port", "80", "src.fast_repl.main:app"]
+CMD ["uvicorn", "--host", "0.0.0.0", "--port", "80", "app.main:app"]

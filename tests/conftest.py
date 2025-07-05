@@ -4,8 +4,8 @@ import pytest
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
-from fast_repl.main import create_app
-from fast_repl.settings import Settings
+from app.main import create_app
+from app.settings import Settings
 
 
 @pytest.fixture(

@@ -1,12 +1,14 @@
 # Fast REPL
 
 Server to check Lean proofs, via API.
+Python library included to facilitate making API calls to server.
+
 Resource limits only work on Linux.
 
 ## Usage
 
 ```python
-uv run uvicorn src.fast_repl.main:app
+uv run uvicorn app.main:app
 ```
 
 ```

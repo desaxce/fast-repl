@@ -12,8 +12,8 @@ from httpx import ASGITransport, AsyncClient
 from loguru import logger
 from tqdm import tqdm
 
-from fast_repl.main import app
-from fast_repl.settings import settings
+from app.main import app
+from app.settings import settings
 
 # TODO: print json commands and snippets nicely + pretty cat the proofs sent (replacing \n with eols)
 
