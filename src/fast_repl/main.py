@@ -18,7 +18,16 @@ from fast_repl.settings import Settings
 
 
 def create_app(settings: Settings) -> FastAPI:
-    app = FastAPI(logger=logger)  # TODO: Make logger aligned on timestamp.
+    app = FastAPI(
+        title="Lean 4 Proof-Check API",
+        description="Submit Lean 4 snippets to be checked/validated via REPL",
+        version="0.1.0",
+        openapi_url="/api/openapi.json",
+        docs_url="/docs",
+        redoc_url="/redoc",
+        logger=logger,
+    )  # TODO: Make logger aligned on timestamp.
+
     pool: ReplPoolManager = ReplPoolManager(
         max_repls=settings.MAX_REPLS,
         max_reuse=settings.MAX_REUSE,

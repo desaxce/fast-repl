@@ -9,6 +9,8 @@ Resource limits only work on Linux.
 uv run uvicorn src.fast_repl.main:app
 ```
 
+Check docs at http://localhost:8000/docs or http://localhost:8000/redoc.
+
 And test with:
 ```
 curl -X POST http://localhost:8000/api/check/ \
@@ -19,10 +21,10 @@ curl -X POST http://localhost:8000/api/check/ \
 Environment variables to configure the REPL pool:
 
 ```
-REPL_POOL_MAX_REPLS   # Maximum number of concurrently running REPLs
-REPL_POOL_MAX_REUSE   # Maximum number of times to reuse a REPL
-REPL_POOL_MEMORY_GB   # Memory limit for each REPL
-REPL_POOL_INIT_REPLS  # Number of REPLs created at startup
+MAX_REPLS   # Maximum number of concurrently running REPLs
+_MAX_REUSE   # Maximum number of times to reuse a REPL
+MEMORY_GB   # Memory limit for each REPL
+INIT_REPLS  # Number of REPLs created at startup
 ```
 
 ## Contribute

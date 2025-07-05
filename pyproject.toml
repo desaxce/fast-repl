@@ -8,11 +8,13 @@ dependencies = [
     "fastapi>=0.115.13",
     "loguru>=0.7.3",
     "psutil>=7.0.0",
+    "pydantic[mypy]>=2.11.7",
     "pydantic-settings>=2.10.0",
     "python-dotenv>=1.1.0",
     "rich>=14.0.0",
     "tqdm>=4.67.1",
     "uvicorn>=0.34.3",
+    "mypy>=1.16.1",
 ]
 
 [tool.uv]
@@ -25,6 +27,7 @@ dev-dependencies = [
     "pre-commit>=4.2.0",
     "pytest-asyncio>=1.0.0",
     "pyright>=1.1.402",
+    "pydantic[mypy]>=2.11.7",
 ]
 
 [tool.pytest.ini_options]
@@ -34,6 +37,7 @@ markers = [
 ]
 
 [tool.mypy]
+plugins = ['pydantic.mypy']
 strict = true
 files = ["src"]
 ignore_missing_imports = true
