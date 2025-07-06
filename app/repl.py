@@ -41,7 +41,7 @@ class _Message(TypedDict):
     data: str
 
 
-class Response(TypedDict, total=False):
+class Response(TypedDict, total=False):  # TODO: rename checkresponse
     sorries: List[_Sorry]
     messages: List[_Message]
     env: int
