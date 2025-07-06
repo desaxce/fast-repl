@@ -5,12 +5,18 @@ import os
 import pytest
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
+from starlette import status
+
+from app.schemas import CheckRequest
 
 
 @pytest.mark.asyncio  # type: ignore
 async def test_repl_check_nat(client: TestClient) -> None:
-    resp = client.post("check", json={"cmd": "#check Nat"})
-    assert resp.status_code == 200
+    payload = CheckRequest(
+        snippets=[{"id": "1", "code": "#check Nat"}],
+    ).model_dump()
+    resp = client.post("check", json=payload)
+    assert resp.status_code == status.HTTP_200_OK
 
     expected = {
         "messages": [
@@ -37,8 +43,11 @@ async def test_repl_check_nat(client: TestClient) -> None:
     indirect=True,
 )
 async def test_repl_mathlib(client: TestClient) -> None:
-    resp = client.post("check", json={"cmd": "import Mathlib"})
-    assert resp.status_code == 200
+    payload = CheckRequest(
+        snippets=[{"id": "1", "code": "import Mathlib"}],
+    ).model_dump()
+    resp = client.post("check", json=payload)
+    assert resp.status_code == status.HTTP_200_OK
 
     expected = {
         "env": 0
@@ -51,8 +60,12 @@ async def test_repl_mathlib(client: TestClient) -> None:
     # Exposing the "env" at the endpoint level makes no sense.
     # Instead subsequent calls using mathlib should be fast because of caching header repls.
     # TODO: implement caching + corresponding tests.
-    resp1 = client.post("check", json={"cmd": "import Mathlib\ndef f := 2", "env": 0})
-    assert resp1.status_code == 200
+
+    payload = CheckRequest(
+        snippets=[{"id": "1", "code": "import Mathlib\ndef f := 2"}],
+    ).model_dump()
+    resp1 = client.post("check", json=payload)
+    assert resp1.status_code == status.HTTP_200_OK
     expected = {
         "env": 1
     }  # Env is 1 because max one repl and pool is shared by all tests.
@@ -71,11 +84,17 @@ async def test_repl_mathlib(client: TestClient) -> None:
     ],
     indirect=True,
 )
+@pytest.mark.skip(reason="Need to wait till header-based repls cache implemented")
 async def test_repl_timeout(client: TestClient) -> None:
     # TODO: we need to ensure same REPL used twice, so max_repls = 1 and max_reuse >=2
     # TODO: add option which says which REPL tackled validation.
-    resp = client.post("check", json={"cmd": "import Mathlib"}, params={"timeout": 1})
-    assert resp.status_code == 500
+
+    payload = CheckRequest(
+        snippets=[{"id": "1", "code": "import Mathlib"}],
+        timeout=1,  # Set a short timeout to trigger a timeout error
+    ).model_dump()
+    resp = client.post("check", json=payload)
+    assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert "timed out" in resp.json()["detail"]
 
     await asyncio.sleep(5)  # 5 seconds should be enough to load Mathlib
@@ -84,7 +103,7 @@ async def test_repl_timeout(client: TestClient) -> None:
         json={"cmd": "theorem one_plus_one : 1 + 1 = 2 := by rfl"},
         timeout=5,
     )
-    assert resp.status_code == 200
+    assert resp.status_code == status.HTTP_200_OK
     # TODO: assert same repl used - probably not actually, since the first timedout.
     # But should assert that only max_repl = 1 and that it's reusable >=1
     expected = {

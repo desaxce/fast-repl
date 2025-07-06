@@ -1,13 +1,14 @@
 from typing import List, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Snippet(BaseModel):
-    id: str = Field(..., description="Opaque identifier for tracing the snippet")
-    code: str = Field(..., description="Lean 4 snippet or proof attempt text")
+    id: str = Field(..., description="Identifier to trace the snippet")
+    code: str = Field(..., description="Lean 4 snippet or proof attempt")
 
 
+# TODO: ensure users can call with single snippet without having to pass array as arg in body
 class CheckRequest(BaseModel):
     snippets: List[Snippet] = Field(
         ..., description="List of snippets to validate (batch or single element)"
@@ -21,13 +22,15 @@ class CheckRequest(BaseModel):
     reuse: bool = Field(
         True, description="Whether to attempt using a pooled REPL if available"
     )
+
+    # TODO: change info tree enum
     infotree: Literal["none", "short", "full"] = Field(
         "none",
         description="Level of detail for the InfoTree: 'none' | 'short' | 'full'",
     )
 
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "snippets": [
                     {"id": "a1", "code": "# Lean 4 code..."},
@@ -39,3 +42,4 @@ class CheckRequest(BaseModel):
                 "infotree": "full",
             }
         }
+    )

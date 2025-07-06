@@ -9,7 +9,7 @@ from app.repl import Repl
 from app.settings import settings
 
 
-class ReplPoolManager:
+class ReplManager:
     def __init__(
         self,
         *,
@@ -27,44 +27,15 @@ class ReplPoolManager:
         self.max_reuse = max_reuse
         self.memory_gb = memory_gb
         self._pool: asyncio.Queue[Repl] = asyncio.Queue(maxsize=max_repls)
+
+        # TODO: Find the right way to initialize pool. Can't afford to have constructor be async
         for _ in range(max_repls):
             self._pool.put_nowait(Repl(max_memory_gb=memory_gb, max_reuse=max_reuse))
 
     # TODO: implement initialization based on header
     # User input is a dict where key = header, value = number of REPLs
-    # async def init_pool(self) -> None:
-    #     for _ in range(self.init_repls):
-    #         await self._create_and_add()
-    #     logger.info("REPL pool initialized with %d instances", self.init_repls)
 
-    # async def _create_and_add(self) -> None:
-    #     async with self._lock:
-    #         if self._total >= self.max_repls:
-    #             logger.warning(
-    #                 "Attempted to create a REPL instance but the pool is full"
-    #             )
-    #             return
-    #         repl = Repl(max_memory_gb=self.memory_gb, max_reuse=self.max_reuse)
-    #         await repl.start()
-    #         self._pool.append(repl)
-    #         self._total += 1
-    #         logger.debug(f"Created a new REPL instance: {repl.uuid}")
-
-    # async def get_repl(self) -> Repl:
-    #     logger.debug("Requesting a REPL instance from the pool")
-    #     if self._pool.empty():
-    #         logger.info(
-    #             f"TOTAL REPLs in pool: {self._total}, max_repls: {self.max_repls}"
-    #         )
-    #         if self._total < self.max_repls:
-    #             await self._create_and_add()
-    #         else:
-    #             raise PoolError("No available REPL")
-    #     repl: Repl = await self._pool.get()
-    #     logger.debug(f"Acquired a REPL instance: {repl.uuid}")
-    #     return repl
-
-    async def get_repl(self) -> Repl:
+    async def get_repl(self, header: str = "") -> Repl:
         try:
             repl: Repl = self._pool.get_nowait()
             logger.info(f"Using REPL {repl.uuid.hex[:8]}")
