@@ -21,7 +21,7 @@ async def read_root() -> dict[str, str]:
     return {"message": "Hello, World!"}
 
 
-@router.post("/check")  # type: ignore
+@router.post("/check")
 async def check(  # type: ignore[reportUnusedFunction]
     command: Command, timeout: float = 10, pool: ReplPoolManager = Depends(get_pool)
 ) -> Any:  # TODO: fix Any typing
