@@ -6,6 +6,7 @@ import signal
 import tempfile
 import uuid
 from asyncio.subprocess import Process
+from time import time
 from typing import List, Literal, NotRequired, TypedDict
 
 import psutil
@@ -41,6 +42,7 @@ class _Message(TypedDict):
     data: str
 
 
+# TODO: Move some of those to schemas or next to it
 class Response(TypedDict, total=False):  # TODO: rename checkresponse
     sorries: List[_Sorry]
     messages: List[_Message]
@@ -52,11 +54,14 @@ class Response(TypedDict, total=False):  # TODO: rename checkresponse
 class Repl:
     def __init__(
         self,
+        header: str = "",
         *,
         max_memory_gb: int = settings.REPL_MEMORY_GB,
         max_reuse: int = settings.MAX_REUSE,
     ) -> None:
         # TODO: Change error file to PIPE
+        self.header = header
+        self.created_at: float = time()
         self.proc: Process | None = None
         self.error_file = tempfile.TemporaryFile("w+")
         self.use_count = 0

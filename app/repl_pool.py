@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from time import time
 
 from loguru import logger
 
@@ -26,53 +27,87 @@ class ReplManager:
         self.max_repls = max_repls
         self.max_reuse = max_reuse
         self.memory_gb = memory_gb
-        self._pool: asyncio.Queue[Repl] = asyncio.Queue(maxsize=max_repls)
+        self._lock = asyncio.Lock()
+        self._free: list[Repl] = []
+        self._busy: set[Repl] = set()
+        # self._pool: asyncio.Queue[Repl] = asyncio.Queue(maxsize=max_repls)
 
         # TODO: Find the right way to initialize pool. Can't afford to have constructor be async
         for _ in range(max_repls):
-            self._pool.put_nowait(Repl(max_memory_gb=memory_gb, max_reuse=max_reuse))
+            self._free.append(Repl(max_memory_gb=memory_gb, max_reuse=max_reuse))
 
     # TODO: implement initialization based on header
     # User input is a dict where key = header, value = number of REPLs
 
     async def get_repl(self, header: str = "") -> Repl:
-        try:
-            repl: Repl = self._pool.get_nowait()
-            logger.info(f"Using REPL {repl.uuid.hex[:8]}")
-            return repl
-        except asyncio.QueueEmpty:
-            logger.error(
-                f"Pool is empty, total REPLs in pool: {self._pool.qsize()}, max_repls: {self.max_repls}"
+        """
+        Async-safe way to get a `Repl` instance for a given header.
+        Immediately raises an Exception if not possible.
+        """
+        async with self._lock:
+            logger.info(
+                f"Size of free REPLs: {len(self._free)}, busy REPLs: {len(self._busy)}"
             )
-            raise PoolError("No available REPL")
+            for i, r in enumerate(self._free):
+                if r.header == header:  # repl shouldn't be exhausted (max age to check)
+                    repl = self._free.pop(i)
+                    self._busy.add(repl)
+                    logger.info(f"Using REPL {repl.uuid.hex[:8]}")
+                    return repl
+            total = len(self._free) + len(self._busy)
+
+            logger.info(f"Total REPLs in pool: {total}")
+            logger.info(f"max repls = {self.max_repls}, max reuse = {self.max_reuse}")
+            if total < self.max_repls:
+                return self._start_new(header)
+
+            logger.info("No free REPLs found, checking for exhausted ones")
+            if self._free:
+                oldest = min(self._free, key=lambda r: r.created_at)
+                self._free.remove(oldest)
+                await oldest.close()
+                return self._start_new(header)
+
+            raise PoolError("no available REPL for the given header")
 
     async def destroy_repl(self, repl: Repl) -> None:
-        uuid = repl.uuid
-        logger.info(f"Destroying REPL {uuid.hex[:8]}")
-        await repl.close()
-        del repl
-        logger.info(f"Destroyed REPL {uuid.hex[:8]}")
-        # Recreate a new REPL instance to maintain pool size
-        await self._pool.put(
-            Repl(max_memory_gb=self.memory_gb, max_reuse=self.max_reuse)
-        )
-
-    async def release_repl(self, repl: Repl) -> None:
-        if repl.exhausted:
+        async with self._lock:
             uuid = repl.uuid
-            logger.info(f"EOL for REPL {uuid.hex[:8]}")
+            self._busy.discard(repl)
+            if repl in self._free:
+                self._free.remove(repl)
+            logger.info(f"Destroying REPL {uuid.hex[:8]}")
             await repl.close()
             del repl
-            logger.info(f"Deleted REPL {uuid.hex[:8]}")
-            # Recreate a new REPL instance to maintain pool size
-            await self._pool.put(
-                Repl(max_memory_gb=self.memory_gb, max_reuse=self.max_reuse)
-            )
-        else:
-            await self._pool.put(repl)
-            logger.info(f"Returned REPL {repl.uuid.hex[:8]}")
+            logger.info(f"Destroyed REPL {uuid.hex[:8]}")
 
+    async def release_repl(self, repl: Repl) -> None:
+        # TODO: Add implementation of exhausted
+        async with self._lock:
+            if repl not in self._busy:
+                logger.error(
+                    f"Attempted to release a REPL that is not busy: {repl.uuid.hex[:8]}"
+                )
+                return
+
+            if repl.exhausted:
+                uuid = repl.uuid
+                logger.info(f"REPL {uuid.hex[:8]} is exhausted, closing it")
+                await repl.close()
+                del repl
+                logger.info(f"Deleted REPL {uuid.hex[:8]}")
+                return
+            self._busy.remove(repl)
+            self._free.append(repl)
+            logger.info(f"Released REPL {repl.uuid.hex[:8]}")
+
+    def _start_new(self, header: str) -> Repl:
+        r = Repl(max_memory_gb=self.memory_gb, max_reuse=self.max_reuse, header=header)
+        r.created_at = time()
+        self._busy.add(r)
+        return r
+
+    # TODO: Implement initalization with header starts
     async def cleanup(self) -> None:
-        while not self._pool.empty():
-            repl = await self._pool.get()
-            await repl.close()
+        # TODO: remove all free repls + wait on busy ones and clean as well?
+        pass
