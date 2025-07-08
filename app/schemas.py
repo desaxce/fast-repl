@@ -14,7 +14,7 @@ class CheckRequest(BaseModel):
         ..., description="List of snippets to validate (batch or single element)"
     )
     timeout: int = Field(
-        5, description="Maximum time in seconds before aborting the check", ge=0
+        30, description="Maximum time in seconds before aborting the check", ge=0
     )
     debug: bool = Field(
         False, description="Include CPU/RAM usage and REPL instance ID in the response"

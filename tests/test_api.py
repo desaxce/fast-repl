@@ -48,7 +48,7 @@ async def test_repl_check_nat(client: TestClient) -> None:
 )
 async def test_repl_mathlib(client: TestClient) -> None:
     payload = CheckRequest(
-        snippets=[{"id": "1", "code": "import Mathlib\ndef f := 1"}],
+        snippets=[{"id": "1", "code": "import Mathlib\ndef f := 1"}]
     ).model_dump()
     resp = client.post("check", json=payload)
     assert resp.status_code == status.HTTP_200_OK

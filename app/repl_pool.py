@@ -61,7 +61,6 @@ class ReplManager:
             if total < self.max_repls:
                 return self._start_new(header)
 
-            logger.info("No free REPLs found, checking for exhausted ones")
             if self._free:
                 oldest = min(self._free, key=lambda r: r.created_at)
                 self._free.remove(oldest)
@@ -91,8 +90,11 @@ class ReplManager:
                 return
 
             if repl.exhausted:
+                # await self.destroy_repl(repl)
                 uuid = repl.uuid
                 logger.info(f"REPL {uuid.hex[:8]} is exhausted, closing it")
+                self._busy.discard(repl)
+
                 await repl.close()
                 del repl
                 logger.info(f"Deleted REPL {uuid.hex[:8]}")
