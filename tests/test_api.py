@@ -48,7 +48,8 @@ async def test_repl_check_nat(client: TestClient) -> None:
 )
 async def test_repl_mathlib(client: TestClient) -> None:
     payload = CheckRequest(
-        snippets=[{"id": "1", "code": "import Mathlib\ndef f := 1"}]
+        snippets=[{"id": "1", "code": "import Mathlib\ndef f := 1"}],
+        debug=True,  # Enable debug to see diagnostics
     ).model_dump()
     resp = client.post("check", json=payload)
     assert resp.status_code == status.HTTP_200_OK
@@ -59,12 +60,13 @@ async def test_repl_mathlib(client: TestClient) -> None:
         assert (
             resp.json()[key] == value
         ), f"Expected {key} to be {value}, got {resp.json()[key]}"
-    assert resp.json()["time"] < 15
+    assert resp.json()["diagnostics"]["time"] < 15
 
     # TODO: implement caching + corresponding tests.
 
     payload = CheckRequest(
         snippets=[{"id": "1", "code": "import Mathlib\ndef f := 2"}],
+        debug=True,
     ).model_dump()
     resp1 = client.post("check", json=payload)
     assert resp1.status_code == status.HTTP_200_OK
@@ -74,8 +76,8 @@ async def test_repl_mathlib(client: TestClient) -> None:
 
     for key, value in expected.items():
         assert resp1.json()[key] == value
-    assert resp1.json()["time"] < 15
-    assert resp1.json()["time"] < 1
+    assert resp1.json()["diagnostics"]["time"] < 15
+    assert resp1.json()["diagnostics"]["time"] < 1
 
 
 @pytest.mark.asyncio  # type: ignore

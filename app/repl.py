@@ -42,13 +42,18 @@ class _Message(TypedDict):
     data: str
 
 
+class Diagnostics(TypedDict, total=False):
+    time: float
+    cpu_max: float
+    memory_max: float
+
+
 # TODO: Move some of those to schemas or next to it
 class Response(TypedDict, total=False):  # TODO: rename checkresponse
     sorries: List[_Sorry]
     messages: List[_Message]
     env: int
-    time: float
-    cpu_max: float
+    diagnostics: NotRequired[Diagnostics]
 
 
 class Repl:
@@ -133,9 +138,13 @@ class Repl:
             return False
         return self.proc.returncode is None
 
-    async def send_timeout(self, command: Command, timeout: float) -> Response:
+    async def send_timeout(
+        self, command: Command, timeout: float, debug: bool
+    ) -> Response:
         try:
-            return await asyncio.wait_for(self.send(command), timeout=timeout)
+            return await asyncio.wait_for(
+                self.send(command, debug=debug), timeout=timeout
+            )
         except TimeoutError:
             logger.error("Lean REPL command timed out")
             raise TimeoutError("Lean REPL command timed out")
@@ -143,7 +152,7 @@ class Repl:
             logger.error("Lean REPL error: {}", e)
             raise e
 
-    async def send(self, command: Command) -> Response:
+    async def send(self, command: Command, debug: bool) -> Response:
         self._cpu_max = 0.0
         if not self.proc or self.proc.returncode is not None:
             # TODO: Don't make it a Lean error.
@@ -195,8 +204,13 @@ class Repl:
             logger.error("Stderr: {}", err)
             raise LeanError(err)
 
-        resp["time"] = elapsed
-        resp["cpu_max"] = self._cpu_max
+        if debug:
+            diagnostics: Diagnostics = {
+                "time": elapsed,
+                "cpu_max": self._cpu_max,
+                "memory_max": 0,  # TODO: Implement memory usage
+            }
+            resp["diagnostics"] = diagnostics
         self.use_count += 1
         return resp
 
