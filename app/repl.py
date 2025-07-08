@@ -14,7 +14,7 @@ import psutil
 from loguru import logger
 
 from app.errors import LeanError, ReplError
-from app.schemas import Command, Diagnostics, Response
+from app.schemas import CheckResponse, Command, Diagnostics
 from app.settings import settings
 
 
@@ -102,7 +102,7 @@ class Repl:
 
     async def send_timeout(
         self, command: Command, timeout: float, debug: bool
-    ) -> Response:
+    ) -> CheckResponse:
         try:
             return await asyncio.wait_for(
                 self.send(command, debug=debug), timeout=timeout
@@ -114,7 +114,7 @@ class Repl:
             logger.error("Lean REPL error: {}", e)
             raise e
 
-    async def send(self, command: Command, debug: bool) -> Response:
+    async def send(self, command: Command, debug: bool) -> CheckResponse:
         self._cpu_max = 0.0
         if not self.proc or self.proc.returncode is not None:
             # TODO: Don't make it a Lean error.
@@ -153,7 +153,7 @@ class Repl:
 
         raw = b"".join(lines)
         try:
-            resp: Response = json.loads(raw)
+            resp: CheckResponse = json.loads(raw)
         except json.JSONDecodeError:
             logger.error("JSON decode error: {}", raw)
             raise ReplError("JSON decode error")

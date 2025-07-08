@@ -13,22 +13,24 @@ class Command(TypedDict):
     env: NotRequired[int]
 
 
-class _Pos(TypedDict):
+class Pos(TypedDict):
     line: int
     column: int
 
 
-class _Sorry(TypedDict):
-    pos: _Pos
-    endPos: _Pos
+class Sorry(TypedDict):
+    pos: Pos
+    endPos: Pos
     goal: str
     proofState: int
 
 
-class _Message(TypedDict):
-    severity: Literal["error", "warning", "info"]
-    pos: _Pos
-    endPos: _Pos
+class Message(TypedDict):
+    severity: Literal[
+        "error", "warning", "info"
+    ]  # TODO: check what type of Message severity we can get
+    pos: Pos
+    endPos: Pos
     data: str
 
 
@@ -38,17 +40,16 @@ class Diagnostics(TypedDict, total=False):
     memory_max: float
 
 
-# TODO: Move some of those to schemas or next to it
-class Response(TypedDict, total=False):  # TODO: rename checkresponse
-    sorries: List[_Sorry]
-    messages: List[_Message]
+class CheckResponse(TypedDict, total=False):
     env: int
+    messages: List[Message]
+    sorries: List[Sorry]
     time: float
     diagnostics: NotRequired[Diagnostics]
 
 
-# TODO: ensure users can call with single snippet without having to pass array as arg in body
 class CheckRequest(BaseModel):
+    # TODO: ensure users can call with single snippet without having to pass array as arg in body
     snippets: List[Snippet] = Field(
         ..., description="List of snippets to validate (batch or single element)"
     )
