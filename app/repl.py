@@ -7,7 +7,6 @@ import tempfile
 import uuid
 from asyncio.subprocess import Process
 from time import time
-from typing import List, Literal, NotRequired, TypedDict
 
 import psutil
 
@@ -15,45 +14,8 @@ import psutil
 from loguru import logger
 
 from app.errors import LeanError, ReplError
+from app.schemas import Command, Diagnostics, Response
 from app.settings import settings
-
-
-class Command(TypedDict):
-    cmd: str
-    env: NotRequired[int]
-
-
-class _Pos(TypedDict):
-    line: int
-    column: int
-
-
-class _Sorry(TypedDict):
-    pos: _Pos
-    endPos: _Pos
-    goal: str
-    proofState: int
-
-
-class _Message(TypedDict):
-    severity: Literal["error", "warning", "info"]
-    pos: _Pos
-    endPos: _Pos
-    data: str
-
-
-class Diagnostics(TypedDict, total=False):
-    time: float
-    cpu_max: float
-    memory_max: float
-
-
-# TODO: Move some of those to schemas or next to it
-class Response(TypedDict, total=False):  # TODO: rename checkresponse
-    sorries: List[_Sorry]
-    messages: List[_Message]
-    env: int
-    diagnostics: NotRequired[Diagnostics]
 
 
 class Repl:
@@ -204,9 +166,10 @@ class Repl:
             logger.error("Stderr: {}", err)
             raise LeanError(err)
 
+        resp["time"] = elapsed
         if debug:
             diagnostics: Diagnostics = {
-                "time": elapsed,
+                "repl_uuid": str(self.uuid),
                 "cpu_max": self._cpu_max,
                 "memory_max": 0,  # TODO: Implement memory usage
             }

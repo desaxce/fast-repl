@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import List, Literal, NotRequired, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -6,6 +6,45 @@ from pydantic import BaseModel, ConfigDict, Field
 class Snippet(BaseModel):
     id: str = Field(..., description="Identifier to trace the snippet")
     code: str = Field(..., description="Lean 4 snippet or proof attempt")
+
+
+class Command(TypedDict):
+    cmd: str
+    env: NotRequired[int]
+
+
+class _Pos(TypedDict):
+    line: int
+    column: int
+
+
+class _Sorry(TypedDict):
+    pos: _Pos
+    endPos: _Pos
+    goal: str
+    proofState: int
+
+
+class _Message(TypedDict):
+    severity: Literal["error", "warning", "info"]
+    pos: _Pos
+    endPos: _Pos
+    data: str
+
+
+class Diagnostics(TypedDict, total=False):
+    repl_uuid: str
+    cpu_max: float
+    memory_max: float
+
+
+# TODO: Move some of those to schemas or next to it
+class Response(TypedDict, total=False):  # TODO: rename checkresponse
+    sorries: List[_Sorry]
+    messages: List[_Message]
+    env: int
+    time: float
+    diagnostics: NotRequired[Diagnostics]
 
 
 # TODO: ensure users can call with single snippet without having to pass array as arg in body

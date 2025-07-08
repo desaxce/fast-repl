@@ -60,7 +60,7 @@ async def test_repl_mathlib(client: TestClient) -> None:
         assert (
             resp.json()[key] == value
         ), f"Expected {key} to be {value}, got {resp.json()[key]}"
-    assert resp.json()["diagnostics"]["time"] < 15
+    assert resp.json()["time"] < 15
 
     # TODO: implement caching + corresponding tests.
 
@@ -76,8 +76,8 @@ async def test_repl_mathlib(client: TestClient) -> None:
 
     for key, value in expected.items():
         assert resp1.json()[key] == value
-    assert resp1.json()["diagnostics"]["time"] < 15
-    assert resp1.json()["diagnostics"]["time"] < 1
+    assert resp1.json()["time"] < 15
+    assert resp1.json()["time"] < 1
 
 
 @pytest.mark.asyncio  # type: ignore
