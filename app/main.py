@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from loguru import logger
 
-from app.repl_pool import ReplManager
+from app.manager import ReplManager
 from app.routers.check import router as check_router
 from app.settings import Settings
 

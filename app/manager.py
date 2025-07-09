@@ -44,7 +44,7 @@ class ReplManager:
         """
         async with self._lock:
             logger.info(
-                f"Size of free REPLs: {len(self._free)}, busy REPLs: {len(self._busy)}"
+                f"[REPLs] | #free = {len(self._free)}, #busy = {len(self._busy)}"
             )
             for i, r in enumerate(self._free):
                 if r.header == header:  # repl shouldn't be exhausted (max age to check)
@@ -54,8 +54,6 @@ class ReplManager:
                     return repl
             total = len(self._free) + len(self._busy)
 
-            logger.info(f"Total REPLs in pool: {total}")
-            logger.info(f"max repls = {self.max_repls}, max reuse = {self.max_reuse}")
             if total < self.max_repls:
                 return self._start_new(header)
 

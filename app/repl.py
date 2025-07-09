@@ -4,6 +4,7 @@ import os
 import platform
 import signal
 import tempfile
+import textwrap
 import uuid
 from asyncio.subprocess import Process
 from time import time
@@ -115,6 +116,15 @@ class Repl:
             raise e
 
     async def send(self, command: Command, debug: bool) -> CheckResponse:
+        snippet = textwrap.indent(command["cmd"], "    ")
+        logger.info(
+            "Running snippet #{} on REPL #{}:\n{}",
+            "asdf",
+            self.uuid.hex[:8],
+            snippet,
+        )
+        # logger.info(command["cmd"], ensure_ascii=False)
+        # logger.info("\n{}", )
         self._cpu_max = 0.0
         if not self.proc or self.proc.returncode is not None:
             # TODO: Don't make it a Lean error.

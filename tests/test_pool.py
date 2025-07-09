@@ -1,7 +1,7 @@
 import pytest
 
 from app.errors import PoolError
-from app.repl_pool import ReplManager
+from app.manager import ReplManager
 
 
 @pytest.mark.asyncio  # type: ignore

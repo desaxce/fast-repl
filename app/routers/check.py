@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger  # ADD nice looking json logs
 
 from app.errors import PoolError
+from app.manager import ReplManager
 from app.repl import Repl
-from app.repl_pool import ReplManager
 from app.schemas import CheckRequest
 from app.split import split_snippet
 
