@@ -30,14 +30,12 @@ class ReplManager:
         self._lock = asyncio.Lock()
         self._free: list[Repl] = []
         self._busy: set[Repl] = set()
-        # self._pool: asyncio.Queue[Repl] = asyncio.Queue(maxsize=max_repls)
 
-        # TODO: Find the right way to initialize pool. Can't afford to have constructor be async
         for _ in range(max_repls):
             self._free.append(Repl(max_memory_gb=memory_gb, max_reuse=max_reuse))
 
-    # TODO: implement initialization based on header
-    # User input is a dict where key = header, value = number of REPLs
+    # TODO: implement initialization based on header where user input
+    # TODO: is a dict where key = header, value = number of REPLs. Have it do `import Mathlib\nimport Aesop` by default.
 
     async def get_repl(self, header: str = "") -> Repl:
         """
@@ -81,7 +79,6 @@ class ReplManager:
             logger.info(f"Destroyed REPL {uuid.hex[:8]}")
 
     async def release_repl(self, repl: Repl) -> None:
-        # TODO: Add implementation of exhausted
         async with self._lock:
             if repl not in self._busy:
                 logger.error(
@@ -90,7 +87,6 @@ class ReplManager:
                 return
 
             if repl.exhausted:
-                # await self.destroy_repl(repl)
                 uuid = repl.uuid
                 logger.info(f"REPL {uuid.hex[:8]} is exhausted, closing it")
                 self._busy.discard(repl)

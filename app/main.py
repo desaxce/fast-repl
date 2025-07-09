@@ -27,7 +27,7 @@ def create_app(settings: Settings) -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
         logger=logger,
-    )  # TODO: Make logger aligned on timestamp.
+    )
 
     pool = ReplManager(
         max_repls=settings.MAX_REPLS,
@@ -41,45 +41,11 @@ def create_app(settings: Settings) -> FastAPI:
         tags=["check"],
     )
     return app
-    # router = APIRouter(prefix="/api")
 
     # # TODO: make it a health endpoint + add stats
     # @router.get("/")  # type: ignore
     # def read_root() -> dict[str, str]:  # type: ignore[reportUnusedFunction]
     #     return {"message": "Hello, World!"}
-
-    # @router.post("/check")  # type: ignore
-    # async def check(  # type: ignore[reportUnusedFunction]
-    #     command: Command, timeout: float = 10
-    # ) -> Any:  # TODO: fix Any typing
-    #     try:
-    #         repl: Repl = await pool.get_repl()
-    #         # TODO: maybe put this repl bit in a pool API
-    #         if not repl.is_running:
-    #             try:
-    #                 await repl.start()  # here add header and include timeout
-    #             except ReplError:
-    #                 await pool.release_repl(repl)
-    #                 raise HTTPException(500, "Error occurred: failed to start REPL")
-    #     except PoolError:
-    #         raise HTTPException(429, "REPL pool exhausted")
-
-    #     result: Response = {}
-    #     try:
-    #         result = await repl.send_timeout(command, timeout)
-    #     except Exception as e:
-    #         await pool.destroy_repl(repl)
-    #         raise HTTPException(500, str(e)) from e
-    #     else:
-    #         await pool.release_repl(repl)
-    #         return result
-
-    # app.include_router(
-    #     router,
-    #     # prefix="/api",
-    #     #    dependencies=[Depends(require_key)],
-    #     tags=["check"],
-    # )
 
 
 settings = Settings()

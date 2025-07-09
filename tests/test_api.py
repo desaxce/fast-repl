@@ -132,3 +132,65 @@ async def test_repl_timeout(client: TestClient) -> None:
     # TODO: make json comparison here
     for key, value in expected.items():
         assert resp.json()[key] == value
+
+
+@pytest.mark.asyncio  # type: ignore
+@pytest.mark.parametrize(  # type: ignore
+    "client",
+    [
+        {"MAX_REPLS": 1, "MAX_REUSE": 3},
+    ],
+    indirect=True,  # todo: what does this do
+)
+async def test_repl_exhausted(client: TestClient) -> None:
+    payload = CheckRequest(
+        snippets=[{"id": "1", "code": "#check Nat"}], debug=True
+    ).model_dump()
+
+    try:
+        resp = client.post("check", json=payload)
+    except Exception as e:
+        logger.info(f"Error during request: {e}")
+        logger.info(resp.status_code)
+        raise
+
+    repl_uuid = resp.json()["diagnostics"]["repl_uuid"]
+
+    payload = CheckRequest(
+        snippets=[{"id": "2", "code": "#check 0"}], debug=True
+    ).model_dump()
+
+    try:
+        resp = client.post("check", json=payload)
+    except Exception as e:
+        logger.info(f"Error during request: {e}")
+        logger.info(resp.status_code)
+        raise
+
+    assert repl_uuid == resp.json()["diagnostics"]["repl_uuid"]
+
+    payload = CheckRequest(
+        snippets=[{"id": "2", "code": "#check 1"}], debug=True
+    ).model_dump()
+
+    try:
+        resp = client.post("check", json=payload)
+    except Exception as e:
+        logger.info(f"Error during request: {e}")
+        logger.info(resp.status_code)
+        raise
+
+    assert repl_uuid == resp.json()["diagnostics"]["repl_uuid"]
+
+    payload = CheckRequest(
+        snippets=[{"id": "3", "code": "#check 2"}], debug=True
+    ).model_dump()
+
+    try:
+        resp = client.post("check", json=payload)
+    except Exception as e:
+        logger.info(f"Error during request: {e}")
+        logger.info(resp.status_code)
+        raise
+
+    assert repl_uuid != resp.json()["diagnostics"]["repl_uuid"]

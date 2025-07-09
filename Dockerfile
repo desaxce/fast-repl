@@ -2,7 +2,6 @@ FROM python:3.13-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# TODO: Create compose.yaml
 # Environment settings
 ENV BASE=/root \
     # REPL_BIN_PATH=/root/repl/.lake/build/bin/repl \
