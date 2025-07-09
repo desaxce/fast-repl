@@ -1,6 +1,7 @@
-from typing import List, Literal, NotRequired, TypedDict
+from typing import Any, List, Literal, NotRequired, Type, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field
+from loguru import logger
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Snippet(BaseModel):
@@ -48,10 +49,17 @@ class CheckResponse(TypedDict, total=False):
     diagnostics: NotRequired[Diagnostics]
 
 
+from typing import TypeVar
+
+T = TypeVar("T", bound="CheckRequest")
+
+
 class CheckRequest(BaseModel):
-    # TODO: ensure users can call with single snippet without having to pass array as arg in body
-    snippets: List[Snippet] = Field(
-        ..., description="List of snippets to validate (batch or single element)"
+    snippets: List[Snippet] | None = Field(
+        None, description="List of snippets to validate (batch or single element)"
+    )
+    snippet: Snippet | None = Field(
+        default=None, description="Single snippet to validate"
     )
     timeout: int = Field(
         30, description="Maximum time in seconds before aborting the check", ge=0
@@ -62,12 +70,25 @@ class CheckRequest(BaseModel):
     reuse: bool = Field(
         True, description="Whether to attempt using a pooled REPL if available"
     )
-
-    # TODO: change info tree enum
-    infotree: Literal["none", "short", "full"] = Field(
+    infotree: Literal["none", "original", "synthetic"] = Field(
         "none",
-        description="Level of detail for the InfoTree: 'none' | 'short' | 'full'",
+        description="Level of detail for the InfoTree: 'none' | 'original' | 'synthetic'",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def unify_snippets(cls: Type[T], values: dict[str, Any]) -> dict[str, Any]:
+        arr = values.get("snippets")
+        one = values.get("snippet")
+        logger.info(f"Received snippets: {arr}, single snippet: {one}")
+        if not arr and not one:
+            raise ValueError("Either `snippet` or `snippets` must be provided")
+        if arr and one:
+            raise ValueError("Only one of `snippet` or `snippets` allowed")
+        if one:
+            values["snippets"] = [one]
+            values.pop("snippet", None)
+        return values
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -79,7 +100,7 @@ class CheckRequest(BaseModel):
                 "timeout": 5,
                 "debug": False,
                 "reuse": True,
-                "infotree": "full",
+                "infotree": "original",
             }
         }
     )

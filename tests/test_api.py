@@ -31,9 +31,31 @@ async def test_repl_check_nat(client: TestClient) -> None:
         ],
         "env": 0,
     }
-    # TODO: create utility to assert JSON eq.
-    for key, value in expected.items():
-        assert resp.json()[key] == value
+
+    assert_json_equal(resp.json(), expected, ignore_keys=["time"])
+
+
+@pytest.mark.asyncio  # type: ignore
+async def test_single_snippet(client: TestClient) -> None:
+    payload = CheckRequest(
+        snippet={"id": "1", "code": "#check Nat"},
+    ).model_dump()
+    resp = client.post("check", json=payload)
+    assert resp.status_code == status.HTTP_200_OK
+
+    expected = {
+        "messages": [
+            {
+                "severity": "info",
+                "pos": {"line": 1, "column": 0},
+                "endPos": {"line": 1, "column": 6},
+                "data": "Nat : Type",
+            }
+        ],
+        "env": 0,
+    }
+
+    assert_json_equal(resp.json(), expected, ignore_keys=["time"])
 
 
 @pytest.mark.asyncio  # type: ignore

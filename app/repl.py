@@ -9,8 +9,6 @@ from asyncio.subprocess import Process
 from time import time
 
 import psutil
-
-# TODO: Check alternatives to loguru add json nice print
 from loguru import logger
 from rich.console import Console
 from rich.syntax import Syntax
