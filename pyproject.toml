@@ -34,7 +34,7 @@ dev-dependencies = [
 [tool.pytest.ini_options]
 addopts = "--asyncio-mode=auto --maxfail=1 --cov=app -m 'not perfs'"
 markers = [
-    "pers: performance tests that are not run by default",
+    "perfs: performance tests that are not run by default",
 ]
 
 [tool.mypy]

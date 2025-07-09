@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from loguru import logger
 from starlette import status
+from utils import assert_json_equal
 
 from app.schemas import CheckRequest
 
@@ -56,13 +57,8 @@ async def test_repl_mathlib(client: TestClient) -> None:
 
     expected = {"env": 1}  # Env is 1 because initialization with header bumps env value
 
-    for key, value in expected.items():
-        assert (
-            resp.json()[key] == value
-        ), f"Expected {key} to be {value}, got {resp.json()[key]}"
+    assert_json_equal(resp.json(), expected, ignore_keys=["time", "diagnostics"])
     assert resp.json()["time"] < 15
-
-    # TODO: implement caching + corresponding tests.
 
     payload = CheckRequest(
         snippets=[{"id": "1", "code": "import Mathlib\ndef f := 2"}],
@@ -74,10 +70,8 @@ async def test_repl_mathlib(client: TestClient) -> None:
         "env": 2
     }  # Env is 2 because max one repl and pool is shared by all tests.
 
-    for key, value in expected.items():  # TODO: implement json comparison utility
-        assert resp1.json()[key] == value
+    assert_json_equal(resp1.json(), expected, ignore_keys=["time", "diagnostics"])
 
-    assert resp1.json()["time"] < 15
     assert resp1.json()["time"] < 1
 
 
@@ -127,12 +121,9 @@ async def test_repl_timeout(client: TestClient) -> None:
             }
         ],
         "env": 0,
-        # "time": 0.4508490000007441,
-        # "cpu_max": 0.0,
+        "time": 0.450849,
     }
-    # TODO: make json comparison here
-    for key, value in expected.items():
-        assert resp.json()[key] == value
+    assert_json_equal(resp.json(), expected, ignore_keys=["time", "diagnostics"])
 
 
 @pytest.mark.asyncio  # type: ignore
