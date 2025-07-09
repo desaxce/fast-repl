@@ -15,7 +15,7 @@ import psutil
 from loguru import logger
 
 from app.errors import LeanError, ReplError
-from app.schemas import CheckResponse, Command, Diagnostics
+from app.schemas import CheckResponse, Diagnostics, Snippet
 from app.settings import settings
 
 
@@ -102,11 +102,11 @@ class Repl:
         return self.proc.returncode is None
 
     async def send_timeout(
-        self, command: Command, timeout: float, debug: bool
+        self, snippet: Snippet, timeout: float, debug: bool
     ) -> CheckResponse:
         try:
             return await asyncio.wait_for(
-                self.send(command, debug=debug), timeout=timeout
+                self.send(snippet, debug=debug), timeout=timeout
             )
         except TimeoutError:
             logger.error("Lean REPL command timed out")
@@ -115,16 +115,13 @@ class Repl:
             logger.error("Lean REPL error: {}", e)
             raise e
 
-    async def send(self, command: Command, debug: bool) -> CheckResponse:
-        snippet = textwrap.indent(command["cmd"], "    ")
+    async def send(self, snippet: Snippet, debug: bool) -> CheckResponse:
         logger.info(
             "Running snippet #{} on REPL #{}:\n{}",
-            "asdf",
+            snippet.id,
             self.uuid.hex[:8],
-            snippet,
+            textwrap.indent(snippet.code, "    "),
         )
-        # logger.info(command["cmd"], ensure_ascii=False)
-        # logger.info("\n{}", )
         self._cpu_max = 0.0
         if not self.proc or self.proc.returncode is not None:
             # TODO: Don't make it a Lean error.
@@ -135,7 +132,10 @@ class Repl:
         assert self.proc.stdin is not None, "stdin pipe not initialized"
         assert self.proc.stdout is not None, "stdout pipe not initialized"
 
-        payload = (json.dumps(command, ensure_ascii=False) + "\n\n").encode("utf-8")
+        payload = (
+            json.dumps({"cmd": snippet.code}, ensure_ascii=False)
+            + "\n\n"  # TODO: add the gc feature
+        ).encode("utf-8")
         start = loop.time()
         try:
             self.proc.stdin.write(payload)
