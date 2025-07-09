@@ -25,14 +25,14 @@ def client(request):
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
-        "--perf-rows",
+        "--perfs-rows",
         action="store",
         default=10,
         type=int,
         help="Number of proofs to run in performance tests (default: 10)",
     )
     parser.addoption(
-        "--perf-shuffle",
+        "--perfs-shuffle",
         action="store_true",
         default=False,
         help="Shuffle dataset rows for performance tests (default: False)",
@@ -41,9 +41,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 @pytest.fixture(scope="session")  # type: ignore
 def perf_rows(request: pytest.FixtureRequest) -> int:
-    return int(request.config.getoption("--perf-rows"))
+    return int(request.config.getoption("--perfs-rows"))
 
 
 @pytest.fixture(scope="session")  # type: ignore
 def perf_shuffle(request: pytest.FixtureRequest) -> bool:
-    return bool(request.config.getoption("--perf-shuffle"))
+    return bool(request.config.getoption("--perfs-shuffle"))

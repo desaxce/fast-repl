@@ -4,7 +4,6 @@ import os
 import platform
 import signal
 import tempfile
-import textwrap
 import uuid
 from asyncio.subprocess import Process
 from time import time
@@ -13,11 +12,33 @@ import psutil
 
 # TODO: Check alternatives to loguru add json nice print
 from loguru import logger
+from rich.console import Console
+from rich.syntax import Syntax
 
 from app.errors import LeanError, ReplError
 from app.schemas import CheckResponse, Command, Diagnostics, Snippet
 from app.settings import settings
 from app.utils import is_blank
+
+log_lock = asyncio.Lock()
+console = Console(log_time_format="[%d/%m/%y %H:%M:%S]", force_terminal=True)
+
+
+async def log_snippet(uuid: uuid.UUID, snippet_id: str, code: str) -> None:
+    header = (
+        f"[{uuid.hex[:8]}] Running snippet [bold magenta]{snippet_id}[/bold magenta]:"
+    )
+    syntax = Syntax(
+        code or "<empty>",
+        "lean",
+        theme="solarized-dark",
+        line_numbers=False,
+        word_wrap=False,
+    )
+
+    async with log_lock:
+        logger.info(header)
+        console.log(syntax)
 
 
 class Repl:
@@ -52,7 +73,6 @@ class Repl:
 
     async def start(self) -> None:
         # TODO: try/catch this bit and raise as REPL startup error.
-
         self._loop = asyncio.get_running_loop()
 
         def _preexec() -> None:
@@ -88,7 +108,7 @@ class Repl:
         self._cpu_max = 0.0
         self._cpu_task = self._loop.create_task(self._cpu_monitor())
 
-        logger.info(f"Started REPL {self.uuid.hex[:8]}")
+        logger.info(f"[{self.uuid.hex[:8]}] Started")
 
     async def _cpu_monitor(self) -> None:
         while self.is_running and self._ps_proc:
@@ -122,12 +142,7 @@ class Repl:
     async def send(
         self, snippet: Snippet, debug: bool, is_header: bool = False
     ) -> CheckResponse:
-        logger.info(
-            "Running snippet #{} on REPL #{}:\n{}",
-            snippet.id,
-            self.uuid.hex[:8],
-            textwrap.indent(snippet.code, "    "),
-        )
+        await log_snippet(self.uuid, snippet.id, snippet.code)
         self._cpu_max = 0.0
         if not self.proc or self.proc.returncode is not None:
             # TODO: Don't make it a Lean error.
@@ -190,7 +205,7 @@ class Repl:
             logger.error("Stderr: {}", err)
             raise LeanError(err)
 
-        resp["time"] = elapsed
+        resp["time"] = round(elapsed, 6)
         if debug:
             diagnostics: Diagnostics = {
                 "repl_uuid": str(self.uuid),

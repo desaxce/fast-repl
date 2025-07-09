@@ -1,6 +1,8 @@
+import json
 from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from loguru import logger
 
 from app.errors import NoAvailableReplError
 from app.manager import Manager
@@ -17,13 +19,13 @@ def get_pool(request: Request) -> Manager:
 
 
 # TODO: summary, and description (tags set during include_router)
-@router.get("/")
+@router.get("/")  # type: ignore
 async def read_root() -> dict[str, str]:
     """Health check or welcome endpoint"""
     return {"message": "Hello, World!"}
 
 
-@router.post("/check")
+@router.post("/check")  # type: ignore
 async def check(  # type: ignore[reportUnusedFunction]
     request: CheckRequest, manager: Manager = Depends(get_pool)
 ) -> CheckResponse:
@@ -36,7 +38,7 @@ async def check(  # type: ignore[reportUnusedFunction]
     debug = request.debug
 
     try:
-        repl: Repl = await manager.get_repl(header)
+        repl: Repl = await manager.get_repl(header, snippet.id)
     except NoAvailableReplError:
         raise HTTPException(429, "Unable to acquire a REPL")
 
@@ -53,5 +55,11 @@ async def check(  # type: ignore[reportUnusedFunction]
         await manager.destroy_repl(repl)
         raise HTTPException(500, str(e)) from e
     else:
+        logger.info(
+            "[{}] Result for [bold magenta]{}[/bold magenta] body: \n{}",
+            repl.uuid.hex[:8],
+            snippet.id,
+            json.dumps(result, indent=2),
+        )
         await manager.release_repl(repl)
         return result

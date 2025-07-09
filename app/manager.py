@@ -22,7 +22,7 @@ class Manager:
         memory_gb: int = settings.REPL_MEMORY_GB,
     ) -> None:
         logger.info(
-            "Initializing REPL manager with: \n\tMAX_REPLS={}, \n\tMAX_USES={}, \n\tREPL_MEMORY_GB={}",
+            "[REPL Manager] Initialize with: \n  MAX_REPLS={},\n  MAX_USES={},\n  REPL_MEMORY_GB={}",
             max_repls,
             max_uses,
             memory_gb,
@@ -40,20 +40,20 @@ class Manager:
     # TODO: implement initialization based on header where user input
     # TODO: is a dict where key = header, value = number of REPLs. Have it do `import Mathlib\nimport Aesop` by default.
 
-    async def get_repl(self, header: str = "") -> Repl:
+    async def get_repl(self, header: str = "", snippet_id: str = "") -> Repl:
         """
         Async-safe way to get a `Repl` instance for a given header.
         Immediately raises an Exception if not possible.
         """
         async with self._lock:
             logger.info(
-                f"[REPLs] | #free = {len(self._free)}, #busy = {len(self._busy)}"
+                f"# Free = {len(self._free)} | # Busy = {len(self._busy)} | # Max = {self.max_repls}"
             )
             for i, r in enumerate(self._free):
                 if r.header == header:  # repl shouldn't be exhausted (max age to check)
                     repl = self._free.pop(i)
                     self._busy.add(repl)
-                    logger.info(f"Using REPL {repl.uuid.hex[:8]}")
+                    logger.info(f"[{repl.uuid.hex[:8]}] Reusing REPL for {snippet_id}")
                     return repl
             total = len(self._free) + len(self._busy)
 
@@ -64,6 +64,7 @@ class Manager:
                 oldest = min(self._free, key=lambda r: r.created_at)
                 self._free.remove(oldest)
                 await oldest.close()
+                del oldest
                 return self.start_new(header)
 
             raise NoAvailableReplError("No available REPL for the given header")
@@ -98,7 +99,7 @@ class Manager:
                 return
             self._busy.remove(repl)
             self._free.append(repl)
-            logger.info(f"Released REPL {repl.uuid.hex[:8]}")
+            logger.info(f"[{repl.uuid.hex[:8]}] Released!")
 
     def start_new(self, header: str) -> Repl:
         repl = Repl(max_memory_gb=self.memory_gb, max_uses=self.max_uses, header=header)

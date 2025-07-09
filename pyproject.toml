@@ -32,24 +32,21 @@ dev-dependencies = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--asyncio-mode=auto --maxfail=1 --cov=app -m 'not performance'"
+addopts = "--asyncio-mode=auto --maxfail=1 --cov=app -m 'not perfs'"
 markers = [
-    "performance: performance tests that are not run by default",
+    "pers: performance tests that are not run by default",
 ]
 
 [tool.mypy]
 plugins = ['pydantic.mypy']
 strict = true
 files = ["app"]
-allow_untyped_decorators = true
 ignore_missing_imports = true
 disable_error_code = [
-    "unused-ignore"
+    "unused-ignore", 
 ]
 
-# TODO: Think about what it means to have this lib packaged: Docker vs. pypi vs. cli?
-# only use library as SDK around the API, not as a CLI tool nor as a self-running lean server directly from python.
-# TODO: Only reason we build a package is so that tests dir sees the app dependency
+# Build package so tests can import app
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

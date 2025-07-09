@@ -50,7 +50,15 @@ def create_app(settings: Settings) -> FastAPI:
 
 
 settings = Settings()
+
 logger.remove()
-logger.add(RichHandler(), level=settings.LOG_LEVEL, format="{message}")
+logger.add(
+    RichHandler(show_time=True, markup=True),
+    colorize=True,
+    level=settings.LOG_LEVEL,
+    format="{message}",
+    backtrace=True,
+    diagnose=True,
+)
 
 app = create_app(settings)

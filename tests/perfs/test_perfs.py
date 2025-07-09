@@ -18,10 +18,8 @@ from app.main import app
 from app.schemas import CheckRequest
 from app.settings import settings
 
-# TODO: print json commands and snippets nicely + pretty cat the proofs sent (replacing \n with eols)
 
-
-@pytest.mark.performance  # type: ignore[misc]
+@pytest.mark.perfs  # type: ignore[misc]
 @pytest.mark.asyncio  # type: ignore[misc]
 async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
     ds = load_dataset(
