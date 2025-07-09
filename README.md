@@ -33,7 +33,7 @@ Environment variables to configure the REPL pool:
 
 ```
 MAX_REPLS   # Maximum number of concurrently running REPLs
-_MAX_REUSE   # Maximum number of times to reuse a REPL
+MAX_USES   # Maximum number of times to reuse a REPL
 MEMORY_GB   # Memory limit for each REPL
 INIT_REPLS  # Number of REPLs created at startup
 ```

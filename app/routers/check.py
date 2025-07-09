@@ -1,21 +1,19 @@
 from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from loguru import logger  # ADD nice looking json logs
 
-from app.errors import PoolError
-from app.manager import ReplManager
+from app.errors import NoAvailableReplError
+from app.manager import Manager
 from app.repl import Repl
 from app.schemas import CheckRequest, CheckResponse, Snippet
 from app.split import split_snippet
-from app.utils import is_blank
 
 router = APIRouter()
 
 
-def get_pool(request: Request) -> ReplManager:
+def get_pool(request: Request) -> Manager:
     """Dependency: retrieve the REPL pool from app state"""
-    return cast(ReplManager, request.app.state.pool)
+    return cast(Manager, request.app.state.pool)
 
 
 # TODO: summary, and description (tags set during include_router)
@@ -27,7 +25,7 @@ async def read_root() -> dict[str, str]:
 
 @router.post("/check")
 async def check(  # type: ignore[reportUnusedFunction]
-    request: CheckRequest, manager: ReplManager = Depends(get_pool)
+    request: CheckRequest, manager: Manager = Depends(get_pool)
 ) -> CheckResponse:
     # TODO: Handle multiple snippets.
     assert len(request.snippets) == 1, "Batch mode not implemented yet"
@@ -35,42 +33,21 @@ async def check(  # type: ignore[reportUnusedFunction]
     timeout: float = request.timeout or 30.0
     snippet = request.snippets[0]
     header, body = split_snippet(snippet.code)
+    debug = request.debug
 
     try:
         repl: Repl = await manager.get_repl(header)
-        # TODO: Put this part of code in manager API
-        # Manager returns a `Repl` instance only, no guarantee on its iniatialization status.
-        # We first check if the REPL process is running.
-        # Then we initialize with the proof header.
-        if not repl.is_running:
-            try:
-                await repl.start()
-            except Exception as e:  # TODO: Make distincition between exceptions
-                logger.error(
-                    f"Failed to start REPL: {e}"
-                )  # TODO: Figure out error vs. exception
-                await manager.destroy_repl(repl)
-                raise HTTPException(500, str(e)) from e
-
-            if not is_blank(header):
-                try:
-                    await repl.send_timeout(
-                        Snippet(id="header", code=header),
-                        timeout=timeout,
-                        debug=request.debug,
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to run header to REPL: {e}")
-                    await manager.destroy_repl(repl)
-                    raise HTTPException(500, str(e)) from e
-    except PoolError:
+    except NoAvailableReplError:
         raise HTTPException(429, "Unable to acquire a REPL")
 
-    # We allow empty bodies because we cannot get the REPL import answer
-    # beyond the first time it runs.
+    try:
+        await manager.prep(repl, header, timeout, debug)
+    except NoAvailableReplError as e:
+        raise HTTPException(500, str(e)) from e
+
     try:
         result = await repl.send_timeout(
-            Snippet(id=snippet.id, code=body), timeout, request.debug
+            Snippet(id=snippet.id, code=body), timeout, debug
         )
     except Exception as e:
         await manager.destroy_repl(repl)

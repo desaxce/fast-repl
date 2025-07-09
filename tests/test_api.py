@@ -41,8 +41,8 @@ async def test_repl_check_nat(client: TestClient) -> None:
     [
         {
             "MAX_REPLS": 1,
-            "MAX_REUSE": 3,
-        },  # bumped max_reuse to 3 because now header makes age increment
+            "MAX_USES": 3,
+        },  # bumped max_uses to 3 because now header makes age increment
     ],
     indirect=True,
 )
@@ -74,8 +74,9 @@ async def test_repl_mathlib(client: TestClient) -> None:
         "env": 2
     }  # Env is 2 because max one repl and pool is shared by all tests.
 
-    for key, value in expected.items():
+    for key, value in expected.items():  # TODO: implement json comparison utility
         assert resp1.json()[key] == value
+
     assert resp1.json()["time"] < 15
     assert resp1.json()["time"] < 1
 
@@ -84,13 +85,13 @@ async def test_repl_mathlib(client: TestClient) -> None:
 @pytest.mark.parametrize(  # type: ignore
     "client",
     [
-        {"MAX_REPLS": 1, "MAX_REUSE": 2},
+        {"MAX_REPLS": 1, "MAX_USES": 2},
     ],
     indirect=True,
 )
 # @pytest.mark.skip(reason="Need to wait till header-based repls cache implemented")
 async def test_repl_timeout(client: TestClient) -> None:
-    # TODO: we need to ensure same REPL used twice, so max_repls = 1 and max_reuse >=2
+    # TODO: we need to ensure same REPL used twice, so max_repls = 1 and max_uses >=2
     # TODO: add option which says which REPL tackled validation.
 
     payload = CheckRequest(
@@ -138,7 +139,7 @@ async def test_repl_timeout(client: TestClient) -> None:
 @pytest.mark.parametrize(  # type: ignore
     "client",
     [
-        {"MAX_REPLS": 1, "MAX_REUSE": 3},
+        {"MAX_REPLS": 1, "MAX_USES": 3},
     ],
     indirect=True,  # todo: what does this do
 )

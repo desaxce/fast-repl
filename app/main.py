@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from loguru import logger
+from rich.logging import RichHandler
 
-from app.manager import ReplManager
+from app.manager import Manager
 from app.routers.check import router as check_router
 from app.settings import Settings
 
@@ -29,9 +30,9 @@ def create_app(settings: Settings) -> FastAPI:
         logger=logger,
     )
 
-    pool = ReplManager(
+    pool = Manager(
         max_repls=settings.MAX_REPLS,
-        max_reuse=settings.MAX_REUSE,
+        max_uses=settings.MAX_USES,
         memory_gb=settings.REPL_MEMORY_GB,
     )
     app.state.pool = pool
@@ -49,4 +50,7 @@ def create_app(settings: Settings) -> FastAPI:
 
 
 settings = Settings()
+logger.remove()
+logger.add(RichHandler(), level=settings.LOG_LEVEL, format="{message}")
+
 app = create_app(settings)

@@ -15,8 +15,9 @@ import psutil
 from loguru import logger
 
 from app.errors import LeanError, ReplError
-from app.schemas import CheckResponse, Diagnostics, Snippet
+from app.schemas import CheckResponse, Command, Diagnostics, Snippet
 from app.settings import settings
+from app.utils import is_blank
 
 
 class Repl:
@@ -25,7 +26,7 @@ class Repl:
         header: str = "",
         *,
         max_memory_gb: int = settings.REPL_MEMORY_GB,
-        max_reuse: int = settings.MAX_REUSE,
+        max_uses: int = settings.MAX_USES,
     ) -> None:
         # TODO: Change error file to PIPE
         self.header = header
@@ -34,7 +35,7 @@ class Repl:
         self.error_file = tempfile.TemporaryFile("w+")
         self.use_count = 0
         self.max_memory_bytes = max_memory_gb * 1024 * 1024 * 1024
-        self.max_reuse = max_reuse
+        self.max_uses = max_uses
         self.uuid = uuid.uuid4()
         self._loop: asyncio.AbstractEventLoop | None = None
         self._cpu_max: float = 0.0
@@ -44,7 +45,10 @@ class Repl:
 
     @property
     def exhausted(self) -> bool:
-        return self.use_count >= self.max_reuse
+        if self.header and not is_blank(self.header):  # todo: fix this header part
+            return self.use_count >= self.max_uses + 1
+
+        return self.use_count >= self.max_uses
 
     async def start(self) -> None:
         # TODO: try/catch this bit and raise as REPL startup error.
@@ -102,11 +106,11 @@ class Repl:
         return self.proc.returncode is None
 
     async def send_timeout(
-        self, snippet: Snippet, timeout: float, debug: bool
+        self, snippet: Snippet, timeout: float, debug: bool, is_header: bool = False
     ) -> CheckResponse:
         try:
             return await asyncio.wait_for(
-                self.send(snippet, debug=debug), timeout=timeout
+                self.send(snippet, debug=debug, is_header=is_header), timeout=timeout
             )
         except TimeoutError:
             logger.error("Lean REPL command timed out")
@@ -115,7 +119,9 @@ class Repl:
             logger.error("Lean REPL error: {}", e)
             raise e
 
-    async def send(self, snippet: Snippet, debug: bool) -> CheckResponse:
+    async def send(
+        self, snippet: Snippet, debug: bool, is_header: bool = False
+    ) -> CheckResponse:
         logger.info(
             "Running snippet #{} on REPL #{}:\n{}",
             snippet.id,
@@ -125,6 +131,7 @@ class Repl:
         self._cpu_max = 0.0
         if not self.proc or self.proc.returncode is not None:
             # TODO: Don't make it a Lean error.
+            logger.error("Process not started")
             raise LeanError("Process not started")
 
         loop = self._loop or asyncio.get_running_loop()
@@ -132,11 +139,15 @@ class Repl:
         assert self.proc.stdin is not None, "stdin pipe not initialized"
         assert self.proc.stdout is not None, "stdout pipe not initialized"
 
+        input: Command = {"cmd": snippet.code}
+        if self.use_count != 0 and not is_header:  # remove is_header
+            input["env"] = 0
+
         payload = (
-            json.dumps({"cmd": snippet.code}, ensure_ascii=False)
-            + "\n\n"  # TODO: add the gc feature
+            json.dumps(input, ensure_ascii=False) + "\n\n"  # TODO: add the gc feature
         ).encode("utf-8")
         start = loop.time()
+        logger.debug("Sending payload to REPL")
         try:
             self.proc.stdin.write(payload)
             await self.proc.stdin.drain()
@@ -147,6 +158,7 @@ class Repl:
             logger.error("Failed to write to REPL stdin: {}", e)
             raise LeanError("Failed to write to REPL stdin")
 
+        logger.debug("Reading response from REPL stdout")
         lines: list[bytes] = []
         try:
             while True:
@@ -159,9 +171,11 @@ class Repl:
             # TODO: When raw = b'', REPL process likely dead.
             raise LeanError("Failed to read from REPL stdout")
 
+        logger.debug("Finished reading response from REPL stdout")
         elapsed = loop.time() - start
 
         raw = b"".join(lines)
+        logger.debug("Raw response from REPL: {}", raw)
         try:
             resp: CheckResponse = json.loads(raw)
         except json.JSONDecodeError:

@@ -34,7 +34,7 @@ dev-dependencies = [
 [tool.pytest.ini_options]
 addopts = "--asyncio-mode=auto --maxfail=1 --cov=app -m 'not performance'"
 markers = [
-    "performance: benchmark tests that are not run by default",
+    "performance: performance tests that are not run by default",
 ]
 
 [tool.mypy]

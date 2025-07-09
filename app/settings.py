@@ -10,7 +10,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
     path_to_mathlib: str | None = None
     LOG_LEVEL: str = "INFO"
     MAX_REPLS: int = 2
-    MAX_REUSE: int = 1
+    MAX_USES: int = 1
     REPL_MEMORY_GB: int = 8
     INIT_REPLS: int = 1
 

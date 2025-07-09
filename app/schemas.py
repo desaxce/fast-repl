@@ -30,7 +30,7 @@ class Message(TypedDict):
         "error", "warning", "info"
     ]  # TODO: check what type of Message severity we can get
     pos: Pos
-    endPos: Pos
+    endPos: Pos | None
     data: str
 
 

@@ -10,7 +10,7 @@ from app.settings import Settings
 
 @pytest.fixture(
     params=[
-        {"MAX_REPLS": 5, "MAX_REUSE": 10},
+        {"MAX_REPLS": 5, "MAX_USES": 10},
     ]
 )  # type: ignore
 def client(request):
@@ -29,13 +29,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         action="store",
         default=10,
         type=int,
-        help="Number of proofs to run in performance benchmarks",
+        help="Number of proofs to run in performance tests (default: 10)",
     )
     parser.addoption(
         "--perf-shuffle",
         action="store_true",
         default=False,
-        help="Shuffle dataset rows for performance benchmarks",
+        help="Shuffle dataset rows for performance tests (default: False)",
     )
 
 

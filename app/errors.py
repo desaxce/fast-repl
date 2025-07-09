@@ -6,5 +6,5 @@ class ReplError(Exception):
     pass
 
 
-class PoolError(Exception):
+class NoAvailableReplError(Exception):
     pass

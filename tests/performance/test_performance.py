@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
+from pprint import pformat
 from statistics import mean
 
 import httpx
 import pytest
 from datasets import load_dataset
 from fastapi.testclient import TestClient
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Limits
 from loguru import logger
 from tqdm import tqdm
 
@@ -21,7 +23,7 @@ from app.settings import settings
 
 @pytest.mark.performance  # type: ignore[misc]
 @pytest.mark.asyncio  # type: ignore[misc]
-async def test_proof_dataset_benchmark(perf_rows: int, perf_shuffle: bool) -> None:
+async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
     ds = load_dataset(
         "Goedel-LM/Lean-workbook-proofs", split="train"
     )  # Goedel is on v4.9.0, some proofs aren't valid in later versions.
@@ -33,24 +35,31 @@ async def test_proof_dataset_benchmark(perf_rows: int, perf_shuffle: bool) -> No
     logger.info(f"Checking {len(ds)} proofs")
     times: list[float] = []
 
+    # TODO: Create real perf tests not using ASGI transport
+    # limits = Limits(max_connections=settings.MAX_REPLS, max_keepalive_connections=5)
+
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://testserver/api"
+        transport=ASGITransport(app=app),
+        base_url="http://testserver/api",
+        # limits=limits,
     ) as client:
-        logger.debug(
-            f"max_repls: {settings.MAX_REPLS}, max_reuse: {settings.MAX_REUSE}"
-        )
-        semaphore = asyncio.Semaphore(settings.MAX_REPLS)  # limit concurrent requests
+        logger.info(settings.BASE)
+        logger.debug(f"MAX_REPLS: {settings.MAX_REPLS}\nMAX_USES: {settings.MAX_USES}")
+        semaphore = asyncio.Semaphore(
+            settings.MAX_REPLS
+        )  # limit concurrent requests don't use this semaphore just llilmit in async client
 
         async def run_item(item: dict[str, str]) -> None:
             async with semaphore:
                 proof = item["full_proof"]
                 payload = CheckRequest(
-                    snippets=[{"id": "truc", "code": proof}],
+                    snippets=[{"id": item["problem_id"], "code": proof}],
                     timeout=30,
                 ).model_dump()
                 resp = await client.post("check", json=payload)
                 assert resp.status_code == 200
                 data = resp.json()
+                logger.info(json.dumps(data, indent=2))
                 assert "time" in data
                 times.append(float(data["time"]))
 

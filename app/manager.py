@@ -3,36 +3,39 @@ from __future__ import annotations
 import asyncio
 from time import time
 
+from fastapi import HTTPException
 from loguru import logger
 
-from app.errors import PoolError
+from app.errors import NoAvailableReplError
 from app.repl import Repl
+from app.schemas import Snippet
 from app.settings import settings
+from app.utils import is_blank
 
 
-class ReplManager:
+class Manager:
     def __init__(
         self,
         *,
         max_repls: int = settings.MAX_REPLS,
-        max_reuse: int = settings.MAX_REUSE,
+        max_uses: int = settings.MAX_USES,
         memory_gb: int = settings.REPL_MEMORY_GB,
     ) -> None:
         logger.info(
-            "Initializing REPL pool with: \n\tMAX_REPLS={}, \n\tMAX_REUSE={}, \n\tREPL_MEMORY_GB={}",
+            "Initializing REPL manager with: \n\tMAX_REPLS={}, \n\tMAX_USES={}, \n\tREPL_MEMORY_GB={}",
             max_repls,
-            max_reuse,
+            max_uses,
             memory_gb,
         )
         self.max_repls = max_repls
-        self.max_reuse = max_reuse
+        self.max_uses = max_uses
         self.memory_gb = memory_gb
         self._lock = asyncio.Lock()
         self._free: list[Repl] = []
         self._busy: set[Repl] = set()
 
         for _ in range(max_repls):
-            self._free.append(Repl(max_memory_gb=memory_gb, max_reuse=max_reuse))
+            self._free.append(Repl(max_memory_gb=memory_gb, max_uses=max_uses))
 
     # TODO: implement initialization based on header where user input
     # TODO: is a dict where key = header, value = number of REPLs. Have it do `import Mathlib\nimport Aesop` by default.
@@ -55,15 +58,15 @@ class ReplManager:
             total = len(self._free) + len(self._busy)
 
             if total < self.max_repls:
-                return self._start_new(header)
+                return self.start_new(header)
 
             if self._free:
                 oldest = min(self._free, key=lambda r: r.created_at)
                 self._free.remove(oldest)
                 await oldest.close()
-                return self._start_new(header)
+                return self.start_new(header)
 
-            raise PoolError("no available REPL for the given header")
+            raise NoAvailableReplError("No available REPL for the given header")
 
     async def destroy_repl(self, repl: Repl) -> None:
         async with self._lock:
@@ -97,13 +100,37 @@ class ReplManager:
             self._free.append(repl)
             logger.info(f"Released REPL {repl.uuid.hex[:8]}")
 
-    def _start_new(self, header: str) -> Repl:
-        r = Repl(max_memory_gb=self.memory_gb, max_reuse=self.max_reuse, header=header)
-        r.created_at = time()
-        self._busy.add(r)
-        return r
+    def start_new(self, header: str) -> Repl:
+        repl = Repl(max_memory_gb=self.memory_gb, max_uses=self.max_uses, header=header)
+        repl.created_at = time()
+        self._busy.add(repl)
+        return repl
 
     # TODO: Implement initalization with header starts
     async def cleanup(self) -> None:
         # TODO: remove all free repls + wait on busy ones and clean as well?
         pass
+
+    async def prep(self, repl: Repl, header: str, timeout: float, debug: bool) -> None:
+        if not repl.is_running:
+            try:
+                await repl.start()
+            except Exception as e:  # TODO: Make distincition between exceptions
+                logger.error(
+                    f"Failed to start REPL: {e}"
+                )  # TODO: Figure out error vs. exception
+                await self.destroy_repl(repl)
+                raise HTTPException(500, str(e)) from e
+
+            if not is_blank(header):
+                try:
+                    await repl.send_timeout(
+                        Snippet(id="header", code=header),
+                        timeout=timeout,
+                        debug=debug,
+                        is_header=True,
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to run header to REPL: {e}")
+                    await self.destroy_repl(repl)
+                    raise HTTPException(500, str(e)) from e
