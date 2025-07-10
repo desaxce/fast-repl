@@ -123,7 +123,7 @@ async def test_repl_mathlib(client: TestClient) -> None:
     expected = {
         "id": uuid,
         "response": {"env": 2},
-    }  # Env is 2 because max one repl and pool is shared by all tests.
+    }  # Env is 2 because max one repl and manager shared by all tests.
 
     assert_json_equal(resp1.json(), expected, ignore_keys=["time", "diagnostics"])
 

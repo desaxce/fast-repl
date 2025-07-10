@@ -9,6 +9,7 @@ from typing import cast
 
 import httpx
 import pytest
+from asgi_lifespan import LifespanManager
 from datasets import load_dataset
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient, Limits
@@ -23,6 +24,7 @@ from app.settings import settings
 @pytest.mark.perfs  # type: ignore[misc]
 @pytest.mark.asyncio  # type: ignore[misc]
 async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
+
     ds = load_dataset(
         "Goedel-LM/Lean-workbook-proofs", split="train"
     )  # Goedel is on v4.9.0, some proofs aren't valid in later versions.
@@ -36,51 +38,53 @@ async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
 
     # TODO: Create real perf tests not using ASGI transport
     # limits = Limits(max_connections=settings.MAX_REPLS, max_keepalive_connections=5)
+    async with LifespanManager(app):
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://testserver/api",
+            # limits=limits,
+        ) as client:
+            logger.info(settings.BASE)
+            logger.debug(
+                f"MAX_REPLS: {settings.MAX_REPLS}\nMAX_USES: {settings.MAX_USES}"
+            )
+            semaphore = asyncio.Semaphore(
+                settings.MAX_REPLS
+            )  # limit concurrent requests don't use this semaphore just llilmit in async client
 
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://testserver/api",
-        # limits=limits,
-    ) as client:
-        logger.info(settings.BASE)
-        logger.debug(f"MAX_REPLS: {settings.MAX_REPLS}\nMAX_USES: {settings.MAX_USES}")
-        semaphore = asyncio.Semaphore(
-            settings.MAX_REPLS
-        )  # limit concurrent requests don't use this semaphore just llilmit in async client
+            async def run_item(item: dict[str, str]) -> CheckResponse:
+                async with semaphore:
+                    proof = item["full_proof"]
+                    payload = CheckRequest(
+                        snippets=[{"id": item["problem_id"], "code": proof}],
+                        timeout=30,
+                    ).model_dump()
+                    resp = await client.post("check", json=payload)
+                    assert resp.status_code == 200
+                    data = resp.json()
+                    logger.info(json.dumps(data, indent=2))
+                    assert "time" in data
+                    times.append(float(data["time"]))
+                    return cast(CheckResponse, data)
 
-        async def run_item(item: dict[str, str]) -> CheckResponse:
-            async with semaphore:
-                proof = item["full_proof"]
-                payload = CheckRequest(
-                    snippets=[{"id": item["problem_id"], "code": proof}],
-                    timeout=30,
-                ).model_dump()
-                resp = await client.post("check", json=payload)
-                assert resp.status_code == 200
-                data = resp.json()
-                logger.info(json.dumps(data, indent=2))
-                assert "time" in data
-                times.append(float(data["time"]))
-                return cast(CheckResponse, data)
+            tasks = [
+                asyncio.create_task(run_item(item))
+                for item in ds
+                if item["problem_id"]
+                not in [
+                    "lean_workbook_10036",
+                    # "lean_workbook_1003",
+                ]  # skip this one, it's too long
+            ]
 
-        tasks = [
-            asyncio.create_task(run_item(item))
-            for item in ds
-            if item["problem_id"]
-            not in [
-                "lean_workbook_10036",
-                # "lean_workbook_1003",
-            ]  # skip this one, it's too long
-        ]
-
-        all_results = await asyncio.gather(*tasks)
-        for idx, result in enumerate(all_results):
-            assert "response" in result, f"response #{idx} missing 'response' key"
-            assert "messages" in result["response"]
-            assert any(
-                msg["data"] == "Goals accomplished!"
-                for msg in result["response"]["messages"]
-            ), f"Proof #{idx} did not accomplish goals: {pformat(result['response']['messages'])}"
+            all_results = await asyncio.gather(*tasks)
+            for idx, result in enumerate(all_results):
+                assert "response" in result, f"response #{idx} missing 'response' key"
+                assert "messages" in result["response"]
+                assert any(
+                    msg["data"] == "Goals accomplished!"
+                    for msg in result["response"]["messages"]
+                ), f"Proof #{idx} did not accomplish goals: {pformat(result['response']['messages'])}"
     logger.info(
         f"min: {min(times):.2f} s, max: {max(times):.2f} s and mean: {mean(times):.2f} s"
     )

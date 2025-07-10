@@ -13,12 +13,13 @@ from app.split import split_snippet
 router = APIRouter()
 
 
-def get_pool(request: Request) -> Manager:
-    """Dependency: retrieve the REPL pool from app state"""
-    return cast(Manager, request.app.state.pool)
+def get_manager(request: Request) -> Manager:
+    """Dependency: retrieve the REPL manager from app state"""
+    return cast(Manager, request.app.state.manager)
 
 
 # TODO: summary, and description (tags set during include_router)
+# TODO: make it a health endpoint + add stats
 @router.get("/")  # type: ignore
 async def read_root() -> dict[str, str]:
     """Health check or welcome endpoint"""
@@ -27,7 +28,7 @@ async def read_root() -> dict[str, str]:
 
 @router.post("/check", response_model=CheckResponse, response_model_exclude_none=True)  # type: ignore
 async def check(  # type: ignore[reportUnusedFunction]
-    request: CheckRequest, manager: Manager = Depends(get_pool)
+    request: CheckRequest, manager: Manager = Depends(get_manager)
 ) -> CheckResponse:
     if not request.snippets:
         raise HTTPException(400, "No snippets provided")

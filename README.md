@@ -29,7 +29,7 @@ curl -X POST http://localhost:8000/api/check/ \
   -d '{"cmd":"#check 1 + 1"}'
 ```
 
-Environment variables to configure the REPL pool:
+Environment variables to configure the REPL manager:
 
 ```
 MAX_REPLS   # Maximum number of concurrently running REPLs

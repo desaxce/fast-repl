@@ -85,7 +85,7 @@ class CheckRequest(BaseModel):
         False, description="Include CPU/RAM usage and REPL instance ID in the response"
     )
     reuse: bool = Field(
-        True, description="Whether to attempt using a pooled REPL if available"
+        True, description="Whether to attempt using a REPL if available"
     )
     infotree: Literal["none", "original", "synthetic"] = Field(
         "none",
