@@ -16,6 +16,13 @@ class Settings(BaseSettings):  # type: ignore[misc]
     MAX_MEM: int = 8
     INIT_REPLS: int = 1
 
+    DATABASE_USER: str = "root"
+    DATABASE_PASSWORD: str = "root"
+    DATABASE_NAME: str = "fastrepl"
+    DATABASE_HOST: str = "localhost"
+    DATABASE_PORT: int = 5432
+    DATABASE_URL: str = "postgresql://root:root@localhost:5432/fastrepl"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     @field_validator("MAX_MEM", mode="before")
