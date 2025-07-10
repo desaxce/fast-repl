@@ -110,12 +110,12 @@ class CheckRequest(BaseModel):
         json_schema_extra={
             "example": {
                 "snippets": [
-                    {"id": "a1", "code": "import Mathlib\ndef f := 1"},
+                    {"id": "mathlib-import-def", "code": "import Mathlib\ndef f := 1"},
                 ],
                 "timeout": 20,
                 "debug": False,
                 "reuse": True,
                 "infotree": "original",
-            }
+            },
         }
     )

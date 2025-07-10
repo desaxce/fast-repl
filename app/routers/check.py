@@ -25,7 +25,7 @@ async def read_root() -> dict[str, str]:
     return {"message": "Hello, World!"}
 
 
-@router.post("/check", response_model_exclude_none=True)  # type: ignore
+@router.post("/check", response_model=CheckResponse, response_model_exclude_none=True)  # type: ignore
 async def check(  # type: ignore[reportUnusedFunction]
     request: CheckRequest, manager: Manager = Depends(get_pool)
 ) -> CheckResponse:

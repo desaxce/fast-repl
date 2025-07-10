@@ -1,10 +1,20 @@
+from typing import Any
+
 from fastapi import FastAPI
 from loguru import logger
+from pydantic.json_schema import GenerateJsonSchema
 from rich.logging import RichHandler
 
 from app.manager import Manager
 from app.routers.check import router as check_router
 from app.settings import Settings
+
+
+def no_sort(self: GenerateJsonSchema, value: Any, parent_key: Any = None) -> Any:
+    return value
+
+
+setattr(GenerateJsonSchema, "sort", no_sort)
 
 # @asynccontextmanager  # type: ignore
 # async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
