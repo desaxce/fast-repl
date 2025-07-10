@@ -23,10 +23,11 @@ curl -H "Authorization: Bearer secret123" \
 Check docs at http://localhost:8000/docs or http://localhost:8000/redoc.
 
 And test with:
+# TODO: prevent redirect 307
 ```
-curl -X POST http://localhost:8000/api/check/ \
+curl -X POST http://localhost:8000/api/check \ 
   -H "Content-Type: application/json" \
-  -d '{"cmd":"#check 1 + 1"}'
+  -d '{"snippets": [{"id": "truc", "code":"#check 1 + 1"}]}' | jq
 ```
 
 Environment variables to configure the REPL manager:

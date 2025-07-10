@@ -1,6 +1,7 @@
 services:
-  api:
-    image: fast-repl:latest
+  api: # TODO: Add test using container
+    # image: fast-repl:latest
+    build: .
     ports:
       - 8000:8000
     environment:
@@ -8,4 +9,14 @@ services:
     volumes:
       - ./data:/app/data      # for a small SQLite file
     command: uvicorn app.main:app --host 0.0.0.0
-# TODO: start pg or sqllite here as separate service?
+  postgres: # TODO: Add prisma python + basic schema
+    image: postgres:17-alpine
+    container_name: postgres
+    volumes:
+      - ./data:/data
+    environment:
+      - POSTGRES_USER=${DATABASE_USER}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      - POSTGRES_DB=${DATABASE_NAME}
+    ports:
+      - "${DATABASE_PORT}:${DATABASE_PORT}"
