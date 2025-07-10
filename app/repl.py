@@ -44,7 +44,7 @@ class Repl:
         self,
         header: str = "",
         *,
-        max_memory_gb: int = settings.REPL_MEMORY_GB,
+        max_mem: int = settings.MAX_MEM,
         max_uses: int = settings.MAX_USES,
     ) -> None:
         # TODO: Change error file to PIPE
@@ -53,7 +53,7 @@ class Repl:
         self.proc: Process | None = None
         self.error_file = tempfile.TemporaryFile("w+")
         self.use_count = 0
-        self.max_memory_bytes = max_memory_gb * 1024 * 1024 * 1024
+        self.max_memory_bytes = max_mem * 1024 * 1024
         self.max_uses = max_uses
         self.uuid = uuid.uuid4()
         self._loop: asyncio.AbstractEventLoop | None = None

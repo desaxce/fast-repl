@@ -70,7 +70,7 @@ The CPU appears to be less of a concern because most REPL processes consume a ma
 one core at a time: this is due to Lean 4 tactics usually being non-threaded. 
 See CPU consumption per proof on Goedel. // TODO: run goedel experiments
 
-On Linux, we can limit the memory resource with the variable REPL_MEMORY_GB.
+On Linux, we can limit the memory resource with the variable MAX_MEM.
 
 Regarding CPU, whether on Linux, Windows or Mac, we recommend understanding the types of proofs
 to be evaluated on your REPL and having an average idea of the CPU required per proof. 

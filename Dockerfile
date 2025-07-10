@@ -9,7 +9,7 @@ ENV BASE=/root \
     LOG_LEVEL=INFO \
     MAX_REPLS=4 \
     MAX_USES=10 \
-    REPL_MEMORY_GB=8 \
+    MAX_MEM=8G \
     INIT_REPLS=1 \
     LEAN_VERSION=v4.15.0
 

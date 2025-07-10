@@ -1,6 +1,8 @@
 import os
+import re
+from typing import cast
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,10 +13,21 @@ class Settings(BaseSettings):  # type: ignore[misc]
     LOG_LEVEL: str = "INFO"
     MAX_REPLS: int = 2
     MAX_USES: int = 1
-    REPL_MEMORY_GB: int = 8
+    MAX_MEM: int = 8
     INIT_REPLS: int = 1
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
+    @field_validator("MAX_MEM", mode="before")
+    def _parse_max_mem(cls, v: str) -> int:
+        if isinstance(v, int):
+            return cast(int, v * 1024)
+        m = re.fullmatch(r"(\d+)([MmGg])", v)
+        if m:
+            n, unit = m.groups()
+            n = int(n)
+            return n if unit.lower() == "m" else n * 1024
+        raise ValueError("MAX_MEM must be an int or '<number>[M|G]'")
 
     @model_validator(mode="after")  # type: ignore
     def set_defaults(self) -> "Settings":

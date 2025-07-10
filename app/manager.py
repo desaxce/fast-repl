@@ -19,24 +19,24 @@ class Manager:
         *,
         max_repls: int = settings.MAX_REPLS,
         max_uses: int = settings.MAX_USES,
-        memory_gb: int = settings.REPL_MEMORY_GB,
+        max_mem: int = settings.MAX_MEM,
     ) -> None:
 
         self.max_repls = max_repls
         self.max_uses = max_uses
-        self.memory_gb = memory_gb
+        self.max_mem = max_mem
         self._lock = asyncio.Lock()
         self._free: list[Repl] = []
         self._busy: set[Repl] = set()
 
         for _ in range(max_repls):
-            self._free.append(Repl(max_memory_gb=memory_gb, max_uses=max_uses))
+            self._free.append(Repl(max_mem=max_mem, max_uses=max_uses))
 
         logger.info(
-            "[Manager] Initialized with: \n  MAX_REPLS={},\n  MAX_USES={},\n  REPL_MEMORY_GB={}",
+            "[Manager] Initialized with: \n  MAX_REPLS={},\n  MAX_USES={},\n  MAX_MEM={}",
             max_repls,
             max_uses,
-            memory_gb,
+            max_mem,
         )
 
     # TODO: implement initialization based on header where user input
@@ -107,7 +107,7 @@ class Manager:
             logger.info(f"\\[{repl.uuid.hex[:8]}] Released!")
 
     def start_new(self, header: str) -> Repl:
-        repl = Repl(max_memory_gb=self.memory_gb, max_uses=self.max_uses, header=header)
+        repl = Repl(max_mem=self.max_mem, max_uses=self.max_uses, header=header)
         repl.created_at = time()
         self._busy.add(repl)
         return repl

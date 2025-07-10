@@ -33,7 +33,7 @@ def create_app(settings: Settings) -> FastAPI:
     pool = Manager(
         max_repls=settings.MAX_REPLS,
         max_uses=settings.MAX_USES,
-        memory_gb=settings.REPL_MEMORY_GB,
+        max_mem=settings.MAX_MEM,
     )
     app.state.pool = pool
     app.include_router(
