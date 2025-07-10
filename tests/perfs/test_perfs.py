@@ -5,6 +5,7 @@ import json
 import os
 from pprint import pformat
 from statistics import mean
+from typing import cast
 
 import httpx
 import pytest
@@ -15,7 +16,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from app.main import app
-from app.schemas import CheckRequest
+from app.schemas import CheckRequest, CheckResponse
 from app.settings import settings
 
 
@@ -47,7 +48,7 @@ async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
             settings.MAX_REPLS
         )  # limit concurrent requests don't use this semaphore just llilmit in async client
 
-        async def run_item(item: dict[str, str]) -> None:
+        async def run_item(item: dict[str, str]) -> CheckResponse:
             async with semaphore:
                 proof = item["full_proof"]
                 payload = CheckRequest(
@@ -60,6 +61,7 @@ async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
                 logger.info(json.dumps(data, indent=2))
                 assert "time" in data
                 times.append(float(data["time"]))
+                return cast(CheckResponse, data)
 
         tasks = [
             asyncio.create_task(run_item(item))
@@ -71,8 +73,14 @@ async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
             ]  # skip this one, it's too long
         ]
 
-        for fut in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Proofs"):
-            await fut
+        all_results = await asyncio.gather(*tasks)
+        for idx, result in enumerate(all_results):
+            assert "response" in result, f"response #{idx} missing 'response' key"
+            assert "messages" in result["response"]
+            assert any(
+                msg["data"] == "Goals accomplished!"
+                for msg in result["response"]["messages"]
+            ), f"Proof #{idx} did not accomplish goals: {pformat(result['response']['messages'])}"
     logger.info(
         f"min: {min(times):.2f} s, max: {max(times):.2f} s and mean: {mean(times):.2f} s"
     )

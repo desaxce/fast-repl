@@ -1,6 +1,5 @@
 from typing import Any, List, Literal, NotRequired, Type, TypedDict
 
-from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -41,17 +40,35 @@ class Diagnostics(TypedDict, total=False):
     memory_max: float
 
 
-class CheckResponse(TypedDict, total=False):
+class ReplResponse(TypedDict):
     env: int
-    messages: List[Message]
-    sorries: List[Sorry]
-    time: float
-    diagnostics: NotRequired[Diagnostics]
+    messages: NotRequired[List[Message]]
+    sorries: NotRequired[List[Sorry]]
 
 
 from typing import TypeVar
 
 T = TypeVar("T", bound="CheckRequest")
+U = TypeVar("U", bound="CheckResponse")
+
+
+# TODO: Ensure ids are unique within batch
+# TODO: Check what REPL-level parallelism means - also check repl-level timeout
+class CheckResponse(BaseModel):
+    id: str
+    time: float
+    error: str | None = None
+    response: ReplResponse | None = None
+    diagnostics: Diagnostics | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def require_error_or_response(
+        cls: Type[U], values: dict[str, Any]
+    ) -> dict[str, Any]:
+        if not (values.get("error") or values.get("response")):
+            raise ValueError("either `error` or `response` must be set")
+        return values
 
 
 class CheckRequest(BaseModel):
@@ -80,7 +97,6 @@ class CheckRequest(BaseModel):
     def unify_snippets(cls: Type[T], values: dict[str, Any]) -> dict[str, Any]:
         arr = values.get("snippets")
         one = values.get("snippet")
-        logger.info(f"Received snippets: {arr}, single snippet: {one}")
         if not arr and not one:
             raise ValueError("Either `snippet` or `snippets` must be provided")
         if arr and one:
@@ -94,10 +110,9 @@ class CheckRequest(BaseModel):
         json_schema_extra={
             "example": {
                 "snippets": [
-                    {"id": "a1", "code": "# Lean 4 code..."},
-                    {"id": "b2", "code": "# Another snippet..."},
+                    {"id": "a1", "code": "import Mathlib\ndef f := 1"},
                 ],
-                "timeout": 5,
+                "timeout": 20,
                 "debug": False,
                 "reuse": True,
                 "infotree": "original",

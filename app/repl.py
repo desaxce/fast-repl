@@ -14,17 +14,17 @@ from rich.console import Console
 from rich.syntax import Syntax
 
 from app.errors import LeanError, ReplError
-from app.schemas import CheckResponse, Command, Diagnostics, Snippet
+from app.schemas import CheckResponse, Command, Diagnostics, ReplResponse, Snippet
 from app.settings import settings
 from app.utils import is_blank
 
 log_lock = asyncio.Lock()
-console = Console(log_time_format="[%d/%m/%y %H:%M:%S]", force_terminal=True)
+console = Console(log_time_format="[%m/%d/%y %H:%M:%S]", force_terminal=True)
 
 
 async def log_snippet(uuid: uuid.UUID, snippet_id: str, code: str) -> None:
     header = (
-        f"[{uuid.hex[:8]}] Running snippet [bold magenta]{snippet_id}[/bold magenta]:"
+        f"\\[{uuid.hex[:8]}] Running snippet [bold magenta]{snippet_id}[/bold magenta]:"
     )
     syntax = Syntax(
         code or "<empty>",
@@ -106,7 +106,7 @@ class Repl:
         self._cpu_max = 0.0
         self._cpu_task = self._loop.create_task(self._cpu_monitor())
 
-        logger.info(f"[{self.uuid.hex[:8]}] Started")
+        logger.info(f"\\[{self.uuid.hex[:8]}] Started")
 
     async def _cpu_monitor(self) -> None:
         while self.is_running and self._ps_proc:
@@ -127,21 +127,31 @@ class Repl:
         self, snippet: Snippet, timeout: float, debug: bool, is_header: bool = False
     ) -> CheckResponse:
         try:
-            return await asyncio.wait_for(
+            repl_response, elapsed_time, diagnostics = await asyncio.wait_for(
                 self.send(snippet, debug=debug, is_header=is_header), timeout=timeout
             )
         except TimeoutError:
+            # TODO: set error message here.
             logger.error("Lean REPL command timed out")
             raise TimeoutError("Lean REPL command timed out")
         except LeanError as e:
             logger.error("Lean REPL error: {}", e)
             raise e
 
+        return CheckResponse(
+            id=snippet.id,
+            response=repl_response,
+            time=elapsed_time,
+            diagnostics=diagnostics,
+        )
+
     async def send(
         self, snippet: Snippet, debug: bool, is_header: bool = False
-    ) -> CheckResponse:
+    ) -> tuple[ReplResponse, float, Diagnostics | None]:
         await log_snippet(self.uuid, snippet.id, snippet.code)
+
         self._cpu_max = 0.0
+
         if not self.proc or self.proc.returncode is not None:
             # TODO: Don't make it a Lean error.
             logger.error("Process not started")
@@ -153,14 +163,17 @@ class Repl:
         assert self.proc.stdout is not None, "stdout pipe not initialized"
 
         input: Command = {"cmd": snippet.code}
+
         if self.use_count != 0 and not is_header:  # remove is_header
             input["env"] = 0
 
         payload = (
             json.dumps(input, ensure_ascii=False) + "\n\n"  # TODO: add the gc feature
         ).encode("utf-8")
+
         start = loop.time()
         logger.debug("Sending payload to REPL")
+
         try:
             self.proc.stdin.write(payload)
             await self.proc.stdin.drain()
@@ -190,7 +203,7 @@ class Repl:
         raw = b"".join(lines)
         logger.debug("Raw response from REPL: {}", raw)
         try:
-            resp: CheckResponse = json.loads(raw)
+            resp: ReplResponse = json.loads(raw)
         except json.JSONDecodeError:
             logger.error("JSON decode error: {}", raw)
             raise ReplError("JSON decode error")
@@ -203,16 +216,15 @@ class Repl:
             logger.error("Stderr: {}", err)
             raise LeanError(err)
 
-        resp["time"] = round(elapsed, 6)
-        if debug:
-            diagnostics: Diagnostics = {
-                "repl_uuid": str(self.uuid),
-                "cpu_max": self._cpu_max,
-                "memory_max": 0,  # TODO: Implement memory usage
-            }
-            resp["diagnostics"] = diagnostics
+        elapsed_time = round(elapsed, 6)
+        diagnostics: Diagnostics = {
+            "repl_uuid": str(self.uuid),
+            "cpu_max": self._cpu_max,
+            "memory_max": 0,  # TODO: Implement memory usage
+        }
+
         self.use_count += 1
-        return resp
+        return resp, elapsed_time, (diagnostics if debug else None)
 
     async def close(self) -> None:
         if self.proc:

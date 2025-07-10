@@ -21,12 +21,7 @@ class Manager:
         max_uses: int = settings.MAX_USES,
         memory_gb: int = settings.REPL_MEMORY_GB,
     ) -> None:
-        logger.info(
-            "[REPL Manager] Initialize with: \n  MAX_REPLS={},\n  MAX_USES={},\n  REPL_MEMORY_GB={}",
-            max_repls,
-            max_uses,
-            memory_gb,
-        )
+
         self.max_repls = max_repls
         self.max_uses = max_uses
         self.memory_gb = memory_gb
@@ -36,6 +31,13 @@ class Manager:
 
         for _ in range(max_repls):
             self._free.append(Repl(max_memory_gb=memory_gb, max_uses=max_uses))
+
+        logger.info(
+            "[Manager] Initialized with: \n  MAX_REPLS={},\n  MAX_USES={},\n  REPL_MEMORY_GB={}",
+            max_repls,
+            max_uses,
+            memory_gb,
+        )
 
     # TODO: implement initialization based on header where user input
     # TODO: is a dict where key = header, value = number of REPLs. Have it do `import Mathlib\nimport Aesop` by default.
@@ -53,7 +55,10 @@ class Manager:
                 if r.header == header:  # repl shouldn't be exhausted (max age to check)
                     repl = self._free.pop(i)
                     self._busy.add(repl)
-                    logger.info(f"[{repl.uuid.hex[:8]}] Reusing REPL for {snippet_id}")
+
+                    logger.info(
+                        f"\\[{repl.uuid.hex[:8]}] Reusing ({"started" if repl.is_running else "non-started"}) REPL for {snippet_id}"
+                    )
                     return repl
             total = len(self._free) + len(self._busy)
 
@@ -99,7 +104,7 @@ class Manager:
                 return
             self._busy.remove(repl)
             self._free.append(repl)
-            logger.info(f"[{repl.uuid.hex[:8]}] Released!")
+            logger.info(f"\\[{repl.uuid.hex[:8]}] Released!")
 
     def start_new(self, header: str) -> Repl:
         repl = Repl(max_memory_gb=self.memory_gb, max_uses=self.max_uses, header=header)
@@ -112,7 +117,9 @@ class Manager:
         # TODO: remove all free repls + wait on busy ones and clean as well?
         pass
 
-    async def prep(self, repl: Repl, header: str, timeout: float, debug: bool) -> None:
+    async def prep(
+        self, repl: Repl, header: str, snippet_id: str, timeout: float, debug: bool
+    ) -> None:
         if not repl.is_running:
             try:
                 await repl.start()
@@ -126,12 +133,12 @@ class Manager:
             if not is_blank(header):
                 try:
                     await repl.send_timeout(
-                        Snippet(id="header", code=header),
+                        Snippet(id=f"{snippet_id}-header", code=header),
                         timeout=timeout,
                         debug=debug,
                         is_header=True,
                     )
                 except Exception as e:
-                    logger.error(f"Failed to run header to REPL: {e}")
+                    logger.error(f"Failed to run header on REPL: {e}")
                     await self.destroy_repl(repl)
                     raise HTTPException(500, str(e)) from e

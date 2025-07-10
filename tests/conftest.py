@@ -1,4 +1,7 @@
+import difflib
 import importlib
+import json
+from typing import Any, Literal
 
 import pytest
 from dotenv import load_dotenv
@@ -47,3 +50,14 @@ def perf_rows(request: pytest.FixtureRequest) -> int:
 @pytest.fixture(scope="session")  # type: ignore
 def perf_shuffle(request: pytest.FixtureRequest) -> bool:
     return bool(request.config.getoption("--perfs-shuffle"))
+
+
+def pytest_assertrepr_compare(
+    op: Literal["=="], left: Any, right: Any
+) -> list[str] | None:
+    if op == "==" and isinstance(left, dict) and isinstance(right, dict):
+        l = json.dumps(left, indent=2, sort_keys=True).splitlines(keepends=True)
+        r = json.dumps(right, indent=2, sort_keys=True).splitlines(keepends=True)
+        diff = difflib.unified_diff(l, r, fromfile="actual", tofile="expected")
+        return [""] + list(diff)
+    return None

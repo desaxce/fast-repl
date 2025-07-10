@@ -25,16 +25,19 @@ async def read_root() -> dict[str, str]:
     return {"message": "Hello, World!"}
 
 
-@router.post("/check")  # type: ignore
+@router.post("/check", response_model_exclude_none=True)  # type: ignore
 async def check(  # type: ignore[reportUnusedFunction]
     request: CheckRequest, manager: Manager = Depends(get_pool)
 ) -> CheckResponse:
+    if not request.snippets:
+        raise HTTPException(400, "No snippets provided")
+
     # TODO: Handle multiple snippets.
     assert len(request.snippets) == 1, "Batch mode not implemented yet"
-
-    timeout: float = request.timeout or 30.0
     snippet = request.snippets[0]
     header, body = split_snippet(snippet.code)
+
+    timeout: float = request.timeout or 30.0
     debug = request.debug
 
     try:
@@ -43,7 +46,7 @@ async def check(  # type: ignore[reportUnusedFunction]
         raise HTTPException(429, "Unable to acquire a REPL")
 
     try:
-        await manager.prep(repl, header, timeout, debug)
+        await manager.prep(repl, header, snippet.id, timeout, debug)
     except NoAvailableReplError as e:
         raise HTTPException(500, str(e)) from e
 
@@ -59,7 +62,7 @@ async def check(  # type: ignore[reportUnusedFunction]
             "[{}] Result for [bold magenta]{}[/bold magenta] body: \n{}",
             repl.uuid.hex[:8],
             snippet.id,
-            json.dumps(result, indent=2),
+            json.dumps(result.model_dump(exclude_none=True), indent=2),
         )
         await manager.release_repl(repl)
         return result

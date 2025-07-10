@@ -1,4 +1,8 @@
+import difflib
+import json
 from typing import Any, Iterable
+
+import pytest
 
 
 def _strip_keys(obj: Any, ignore: Iterable[str]) -> Any:
@@ -18,6 +22,18 @@ def assert_json_equal(
     Usage:
         assert_json_equal(resp.json(), expected, ignore_keys=["time", "cpu_max"])
     """
-    a = _strip_keys(actual, ignore_keys)
-    e = _strip_keys(expected, ignore_keys)
-    assert a == e, f"\n=== ACTUAL ===\n{a!r}\n=== EXPECTED ===\n{e!r}"
+    a = json.dumps(
+        _strip_keys(actual, ignore_keys), indent=2, sort_keys=True, ensure_ascii=False
+    )
+    e = json.dumps(
+        _strip_keys(expected, ignore_keys), indent=2, sort_keys=True, ensure_ascii=False
+    )
+    if a != e:
+        diff = difflib.unified_diff(
+            e.splitlines(),
+            a.splitlines(),
+            fromfile="expected",
+            tofile="actual",
+            lineterm="",
+        )
+        pytest.fail("\n" + "\n".join(diff))
