@@ -14,7 +14,7 @@ from rich.console import Console
 from rich.syntax import Syntax
 
 from app.errors import LeanError, ReplError
-from app.schemas import CheckResponse, Command, Diagnostics, ReplResponse, Snippet
+from app.schemas import CheckResponse, Command, CommandResponse, Diagnostics, Snippet
 from app.settings import settings
 from app.utils import is_blank
 
@@ -147,7 +147,7 @@ class Repl:
 
     async def send(
         self, snippet: Snippet, debug: bool, is_header: bool = False
-    ) -> tuple[ReplResponse, float, Diagnostics | None]:
+    ) -> tuple[CommandResponse, float, Diagnostics | None]:
         await log_snippet(self.uuid, snippet.id, snippet.code)
 
         self._cpu_max = 0.0
@@ -203,7 +203,7 @@ class Repl:
         raw = b"".join(lines)
         logger.debug("Raw response from REPL: {}", raw)
         try:
-            resp: ReplResponse = json.loads(raw)
+            resp: CommandResponse = json.loads(raw)
         except json.JSONDecodeError:
             logger.error("JSON decode error: {}", raw)
             raise ReplError("JSON decode error")

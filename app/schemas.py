@@ -8,9 +8,13 @@ class Snippet(BaseModel):
     code: str = Field(..., description="Lean 4 snippet or proof attempt")
 
 
+# The classes below map to the REPL/JSON.lean in the Lean REPL repository:
+# see https://github.com/leanprover-community/repl
+
+
 class Command(TypedDict):
     cmd: str
-    env: NotRequired[int]
+    env: NotRequired[int | None]
 
 
 class Pos(TypedDict):
@@ -22,16 +26,28 @@ class Sorry(TypedDict):
     pos: Pos
     endPos: Pos
     goal: str
-    proofState: int
+    proofState: NotRequired[int | None]
 
 
 class Message(TypedDict):
-    severity: Literal[
-        "error", "warning", "info"
-    ]  # TODO: check what type of Message severity we can get
+    severity: Literal["trace", "info", "warning", "error"]
     pos: Pos
-    endPos: Pos | None
+    endPos: NotRequired[Pos | None]
     data: str
+
+
+class ProofStep(TypedDict):
+    proofState: int
+    tactic: str
+
+
+class Tactic(TypedDict):
+    pos: int
+    endPos: int
+    goals: str
+    tactic: str
+    proofState: NotRequired[int | None]
+    usedConstants: NotRequired[list[str]]
 
 
 class Diagnostics(TypedDict, total=False):
@@ -40,10 +56,12 @@ class Diagnostics(TypedDict, total=False):
     memory_max: float
 
 
-class ReplResponse(TypedDict):
+class CommandResponse(TypedDict):
     env: int
     messages: NotRequired[List[Message]]
     sorries: NotRequired[List[Sorry]]
+    tactics: NotRequired[List[Tactic]]
+    infotree: NotRequired[dict[str, Any] | None]
 
 
 from typing import TypeVar
@@ -58,7 +76,7 @@ class CheckResponse(BaseModel):
     id: str
     time: float
     error: str | None = None
-    response: ReplResponse | None = None
+    response: CommandResponse | None = None
     diagnostics: Diagnostics | None = None
 
     @model_validator(mode="before")

@@ -1,5 +1,3 @@
-# TODO: use prisma python with pg??
-
 # # app/auth.py
 # import os
 # from fastapi import HTTPException, Security
