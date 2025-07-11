@@ -246,3 +246,17 @@ async def test_repl_exhausted(client: TestClient) -> None:
         raise
 
     assert repl_uuid != resp.json()["diagnostics"]["repl_uuid"]
+
+
+@pytest.mark.asyncio  # type: ignore
+async def test_check_trailing_slash(client: TestClient):
+    uuid = str(uuid4())
+    payload = CheckRequest(
+        snippets=[{"id": uuid, "code": "#check Nat"}],
+    ).model_dump()
+
+    # Call with slash
+    resp = client.post("check/", json=payload, follow_redirects=False)
+    assert resp.status_code == status.HTTP_200_OK
+
+    assert "messages" in resp.json()["response"]

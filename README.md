@@ -23,7 +23,6 @@ curl -H "Authorization: Bearer secret123" \
 Check docs at http://localhost:8000/docs or http://localhost:8000/redoc.
 
 And test with:
-# TODO: prevent redirect 307
 ```
 curl -X POST http://localhost:8000/api/check \ 
   -H "Content-Type: application/json" \

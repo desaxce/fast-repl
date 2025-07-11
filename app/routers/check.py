@@ -27,6 +27,12 @@ async def read_root() -> dict[str, str]:
 
 
 @router.post("/check", response_model=CheckResponse, response_model_exclude_none=True)  # type: ignore
+@router.post(
+    "/check/",
+    include_in_schema=False,  # To not clutter OpenAPI spec
+    response_model=CheckResponse,
+    response_model_exclude_none=True,
+)  # type: ignore
 async def check(  # type: ignore[reportUnusedFunction]
     request: CheckRequest, manager: Manager = Depends(get_manager)
 ) -> CheckResponse:
