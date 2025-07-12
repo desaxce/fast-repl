@@ -14,6 +14,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
 
       - name: "Set up Python"
         uses: actions/setup-python@v5
@@ -26,6 +28,19 @@ jobs:
       - name: Run pre-commit
         run: uv run pre-commit run --all-files
 
+      - name: Restore Lean cache
+        id: lean-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.elan
+            repl
+            mathlib4
+          key: ${{ runner.os }}-lean-${{ env.LEAN_VERSION }}
+          restore-keys: ${{ runner.os }}-lean-
+      - name: Run Lean setup
+        if: steps.lean-cache.outputs.cache-hit != 'true'
+        run: bash setup.sh
       - name: Run tests
         run: uv run pytest
 
