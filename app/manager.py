@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from time import time
 
 from fastapi import HTTPException
@@ -39,8 +40,25 @@ class Manager:
             max_mem,
         )
 
-    # TODO: implement initialization based on header where user input
-    # TODO: is a dict where key = header, value = number of REPLs. Have it do `import Mathlib\nimport Aesop` by default.
+    async def initialize_repls(self) -> None:
+        if self.max_repls < sum(settings.INIT_REPLS.values()):
+            raise ValueError(
+                f"Cannot initialize REPLs: Σ (INIT_REPLS values) = {sum(settings.INIT_REPLS.values())} > {self.max_repls} = MAX_REPLS"
+            )
+        initialized_repls: list[Repl] = []
+        for header, count in settings.INIT_REPLS.items():
+            for _ in range(count):
+                initialized_repls.append(await self.get_repl(header=header))
+
+        async def _prep_and_release(repl: Repl) -> None:
+            await self.prep(repl, snippet_id="init", timeout=5, debug=False)
+            await self.release_repl(repl)
+
+        await asyncio.gather(*(_prep_and_release(r) for r in initialized_repls))
+
+        logger.info(
+            f"Initialized REPLs with: {json.dumps(settings.INIT_REPLS, indent=2)}"
+        )
 
     async def get_repl(self, header: str = "", snippet_id: str = "") -> Repl:
         """
@@ -72,7 +90,7 @@ class Manager:
                 del oldest
                 return self.start_new(header)
 
-            raise NoAvailableReplError("No available REPL for the given header")
+            raise NoAvailableReplError("No available REPLs")
 
     async def destroy_repl(self, repl: Repl) -> None:
         async with self._lock:
@@ -113,11 +131,21 @@ class Manager:
         return repl
 
     async def cleanup(self) -> None:
-        # TODO: remove all free repls + wait on busy ones and clean as well?
+        async with self._lock:
+            logger.info("Cleaning up REPL manager...")
+            for repl in self._free:
+                await repl.close()
+            self._free.clear()
+
+            for repl in self._busy:
+                await repl.close()
+            self._busy.clear()
+
+            logger.info("REPL manager cleaned up!")
         pass
 
     async def prep(
-        self, repl: Repl, header: str, snippet_id: str, timeout: float, debug: bool
+        self, repl: Repl, snippet_id: str, timeout: float, debug: bool
     ) -> CheckResponse | None:
         if not repl.is_running:
             try:
@@ -127,10 +155,10 @@ class Manager:
                 await self.destroy_repl(repl)
                 raise HTTPException(500, str(e)) from e
 
-            if not is_blank(header):
+            if not is_blank(repl.header):
                 try:
                     cmd_response = await repl.send_timeout(
-                        Snippet(id=f"{snippet_id}-header", code=header),
+                        Snippet(id=f"{snippet_id}-header", code=repl.header),
                         timeout=timeout,
                         debug=debug,
                         is_header=True,

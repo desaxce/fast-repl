@@ -13,7 +13,7 @@ ENV BASE=/root \
     MAX_REPLS=4 \
     MAX_USES=10 \
     MAX_MEM=8G \
-    INIT_REPLS=1 \
+    INIT_REPLS={"import Mathlib\nimport Aesop":1} \
     LEAN_VERSION=v4.15.0
 
 

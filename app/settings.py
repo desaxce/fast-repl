@@ -14,7 +14,9 @@ class Settings(BaseSettings):
     MAX_REPLS: int = 2
     MAX_USES: int = 1
     MAX_MEM: int = 8
-    INIT_REPLS: int = 1
+    INIT_REPLS: dict[str, int] = Field(
+        default_factory=lambda: {"import Mathlib\nimport Aesop": 1}
+    )
 
     DATABASE_USER: str = "root"
     DATABASE_PASSWORD: str = "root"

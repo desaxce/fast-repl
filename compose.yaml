@@ -1,5 +1,5 @@
 services:
-  api: # TODO: Add test using container
+  api:
     build:
       context: .
       dockerfile: Dockerfile

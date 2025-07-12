@@ -39,11 +39,12 @@ def create_app(settings: Settings) -> FastAPI:
             max_mem=settings.MAX_MEM,
         )
         app.state.manager = manager
-        # await app.state.mana.init_manager()
-        logger.info("Initialized manager!")
+        logger.info(settings.INIT_REPLS)
+        await app.state.manager.initialize_repls()
+
         yield
-        # await app.state.manager.cleanup()
-        logger.info("Cleaned up REPL manager!")
+
+        await app.state.manager.cleanup()
 
     app = FastAPI(
         lifespan=lifespan,

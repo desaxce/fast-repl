@@ -45,7 +45,7 @@ async def check(
         raise HTTPException(429, "Unable to acquire a REPL")
 
     try:
-        check_response = await manager.prep(repl, header, snippet.id, timeout, debug)
+        check_response = await manager.prep(repl, snippet.id, timeout, debug)
         if check_response is not None:
             res = check_response.model_dump()
             if "error" in check_response.model_dump() and res["error"]:
