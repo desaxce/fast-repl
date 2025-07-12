@@ -59,7 +59,7 @@ async def _run_checks(
             raise HTTPException(500, str(e)) from e
         else:
             logger.info(
-                "[{}] Result for [bold magenta]{}[/bold magenta] body: →\n{}",
+                "[{}] Result for [bold magenta]{}[/bold magenta] body →\n{}",
                 repl.uuid.hex[:8],
                 snippet.custom_id,
                 json.dumps(resp.model_dump(exclude_none=True), indent=2),

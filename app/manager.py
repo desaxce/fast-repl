@@ -29,6 +29,7 @@ class Manager:
         self.init_repls = init_repls
 
         self._lock = asyncio.Lock()
+        self._cond = asyncio.Condition(self._lock)
         self._free: list[Repl] = []
         self._busy: set[Repl] = set()
 
@@ -60,40 +61,55 @@ class Manager:
 
         logger.info(f"Initialized REPLs with: {json.dumps(self.init_repls, indent=2)}")
 
-    async def get_repl(self, header: str = "", snippet_id: str = "") -> Repl:
+    async def get_repl(
+        self,
+        header: str = "",
+        snippet_id: str = "",
+        timeout: float = 60,  # TODO: make this configurable
+    ) -> Repl:
         """
         Async-safe way to get a `Repl` instance for a given header.
         Immediately raises an Exception if not possible.
         """
-        async with self._lock:
-            logger.info(
-                f"# Free = {len(self._free)} | # Busy = {len(self._busy)} | # Max = {self.max_repls}"
-            )
-            for i, r in enumerate(self._free):
-                if r.header == header:  # repl shouldn't be exhausted (max age to check)
-                    repl = self._free.pop(i)
-                    self._busy.add(repl)
+        deadline = time() + timeout
+        async with self._cond:
+            while True:
+                logger.info(
+                    f"# Free = {len(self._free)} | # Busy = {len(self._busy)} | # Max = {self.max_repls}"
+                )
+                for i, r in enumerate(self._free):
+                    if (
+                        r.header == header
+                    ):  # repl shouldn't be exhausted (max age to check)
+                        repl = self._free.pop(i)
+                        self._busy.add(repl)
 
-                    logger.info(
-                        f"\\[{repl.uuid.hex[:8]}] Reusing ({"started" if repl.is_running else "non-started"}) REPL for {snippet_id}"
-                    )
-                    return repl
-            total = len(self._free) + len(self._busy)
+                        logger.info(
+                            f"\\[{repl.uuid.hex[:8]}] Reusing ({"started" if repl.is_running else "non-started"}) REPL for {snippet_id}"
+                        )
+                        return repl
+                total = len(self._free) + len(self._busy)
+                if total < self.max_repls:
+                    return self.start_new(header)
 
-            if total < self.max_repls:
-                return self.start_new(header)
+                if self._free:
+                    oldest = min(self._free, key=lambda r: r.created_at)
+                    self._free.remove(oldest)
+                    uuid = oldest.uuid
+                    logger.info(f"Destroying REPL {uuid.hex[:8]}")
+                    await oldest.close()
+                    del oldest
+                    logger.info(f"Destroyed REPL {uuid.hex[:8]}")
+                    return self.start_new(header)
 
-            if self._free:
-                oldest = min(self._free, key=lambda r: r.created_at)
-                self._free.remove(oldest)
-                await oldest.close()
-                del oldest
-                return self.start_new(header)
+                remaining = deadline - time()
+                if remaining <= 0:
+                    raise NoAvailableReplError(f"Timed out after {timeout}s")
 
-            raise NoAvailableReplError("No available REPLs")
+                await asyncio.wait_for(self._cond.wait(), timeout=remaining)
 
     async def destroy_repl(self, repl: Repl) -> None:
-        async with self._lock:
+        async with self._cond:
             uuid = repl.uuid
             self._busy.discard(repl)
             if repl in self._free:
@@ -104,7 +120,7 @@ class Manager:
             logger.info(f"Destroyed REPL {uuid.hex[:8]}")
 
     async def release_repl(self, repl: Repl) -> None:
-        async with self._lock:
+        async with self._cond:
             if repl not in self._busy:
                 logger.error(
                     f"Attempted to release a REPL that is not busy: {repl.uuid.hex[:8]}"
@@ -123,6 +139,7 @@ class Manager:
             self._busy.remove(repl)
             self._free.append(repl)
             logger.info(f"\\[{repl.uuid.hex[:8]}] Released!")
+            self._cond.notify(1)
 
     def start_new(self, header: str) -> Repl:
         repl = Repl(max_mem=self.max_mem, max_uses=self.max_uses, header=header)
@@ -131,7 +148,7 @@ class Manager:
         return repl
 
     async def cleanup(self) -> None:
-        async with self._lock:
+        async with self._cond:
             logger.info("Cleaning up REPL manager...")
             for repl in self._free:
                 await repl.close()
