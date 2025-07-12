@@ -4,10 +4,9 @@ import asyncio
 import json
 from time import time
 
-from fastapi import HTTPException
 from loguru import logger
 
-from app.errors import NoAvailableReplError
+from app.errors import NoAvailableReplError, ReplError
 from app.repl import Repl
 from app.schemas import CheckResponse, Snippet
 from app.settings import settings
@@ -147,30 +146,32 @@ class Manager:
     async def prep(
         self, repl: Repl, snippet_id: str, timeout: float, debug: bool
     ) -> CheckResponse | None:
-        if not repl.is_running:
+        if repl.is_running:
+            return None
+
+        try:
+            await repl.start()
+        except Exception as e:
+            logger.exception("Failed to start REPL: %s", e)
+            await self.destroy_repl(repl)
+            raise ReplError("Failed to start REPL") from e
+
+        if not is_blank(repl.header):
             try:
-                await repl.start()
-            except Exception as e:  # TODO: Make distincition between exceptions
-                logger.exception(f"Failed to start REPL: {e}")
+                cmd_response = await repl.send_timeout(
+                    Snippet(id=f"{snippet_id}-header", code=repl.header),
+                    timeout=timeout,
+                    debug=debug,
+                    is_header=True,
+                )
+            except Exception as e:
+                logger.exception("Failed to run header on REPL: %s", e)
                 await self.destroy_repl(repl)
-                raise HTTPException(500, str(e)) from e
+                raise ReplError("Failed to run header on REPL") from e
 
-            if not is_blank(repl.header):
-                try:
-                    cmd_response = await repl.send_timeout(
-                        Snippet(id=f"{snippet_id}-header", code=repl.header),
-                        timeout=timeout,
-                        debug=debug,
-                        is_header=True,
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to run header on REPL: {e}")
-                    await self.destroy_repl(repl)
-                    raise HTTPException(500, str(e)) from e
+            if cmd_response.error:
+                logger.error(f"Header command failed: {cmd_response.error}")
+                await self.destroy_repl(repl)
 
-                if cmd_response.error:
-                    logger.error(f"Header command failed: {cmd_response.error}")
-                    await self.destroy_repl(repl)
-                return cmd_response
-            return None  # TODO: store first header command response
-        return None
+            return cmd_response
+        return None  # TODO: store first header command response

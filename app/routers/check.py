@@ -43,6 +43,9 @@ async def check(
         repl: Repl = await manager.get_repl(header, snippet.id)
     except NoAvailableReplError:
         raise HTTPException(429, "Unable to acquire a REPL")
+    except Exception as e:
+        logger.exception("Failed to get REPL: %s", e)
+        raise HTTPException(500, str(e)) from e
 
     try:
         check_response = await manager.prep(repl, snippet.id, timeout, debug)
@@ -50,7 +53,8 @@ async def check(
             res = check_response.model_dump()
             if "error" in check_response.model_dump() and res["error"]:
                 return check_response
-    except NoAvailableReplError as e:
+    except Exception as e:
+        logger.exception("Failed to prepare REPL: %s", e)
         raise HTTPException(500, str(e)) from e
 
     try:
@@ -59,6 +63,7 @@ async def check(
         )
     except Exception as e:
         await manager.destroy_repl(repl)
+        logger.exception("Failed to send snippet to REPL: %s", e)
         raise HTTPException(500, str(e)) from e
     else:
         logger.info(
