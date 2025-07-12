@@ -15,6 +15,7 @@ dependencies = [
     "tqdm>=4.67.1",
     "uvicorn>=0.34.3",
     "mypy>=1.16.1",
+    "pytest-xdist>=3.8.0",
 ]
 
 [tool.uv]
@@ -35,9 +36,10 @@ dev-dependencies = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "--asyncio-mode=auto --maxfail=1 --cov=app -m 'not perfs'"
+addopts = "--asyncio-mode=auto --maxfail=1 --cov=app -m 'not perfs and not match'"
 markers = [
     "perfs: performance tests that are not run by default",
+    "match: tests which ensure backward-compatibility with kimina-lean-server"
 ]
 
 [tool.mypy]

@@ -79,7 +79,7 @@ async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
 
             all_results = await asyncio.gather(
                 *tasks
-            )  # TODO: run check as they proofs finish
+            )  # TODO: run check as the proofs finish
             for idx, result in enumerate(all_results):
                 assert "response" in result, f"response #{idx} missing 'response' key"
                 if settings.LEAN_VERSION == "v4.15.0":

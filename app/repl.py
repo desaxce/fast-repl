@@ -136,7 +136,7 @@ class Repl:
             )
         except TimeoutError:
             elapsed_time = timeout
-            error = "Lean REPL command timed out"
+            error = f"Lean REPL command timed out in {timeout} seconds"
             logger.error(error)
         except LeanError as e:
             logger.error("Lean REPL error: %s", e)

@@ -54,6 +54,9 @@ jobs:
       - name: Run performance tests
         run: uv run pytest -m perfs
 
+      - name: Run backward compatibility tests
+        run: uv run pytest -n auto -m match
+
       # - name: Docker compose test
       #   run: docker compose --profile test up --exit-code-from test
 

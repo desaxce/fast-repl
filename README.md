@@ -69,7 +69,7 @@ process can access. Should the Lean 4 code to evaluate contain options such as
 consume what is available until it reaches an OOM or slows down your whole machine for CPU. 
 The CPU appears to be less of a concern because most REPL processes consume a maximum of
 one core at a time: this is due to Lean 4 tactics usually being non-threaded. 
-See CPU consumption per proof on Goedel. // TODO: run goedel experiments
+TODO: Check CPU consumption per proof on Goedel.
 
 On Linux, we can limit the memory resource with the variable MAX_MEM.
 
