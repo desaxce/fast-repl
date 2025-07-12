@@ -41,6 +41,12 @@ jobs:
       - name: Run Lean setup
         if: steps.lean-cache.outputs.cache-hit != 'true'
         run: bash setup.sh
+        
+      - name: Add lake binary to PATH
+        run: |
+          echo "$ELAN_HOME/bin" >> $GITHUB_PATH
+      - name: Verify lake
+        run: which lake
       - name: Run tests
         run: uv run pytest
 

@@ -40,6 +40,3 @@ pushd mathlib4
 git checkout ${LEAN_VERSION}
 lake exe cache get && lake build
 popd
-
-# Ensure elan binaries like lake are available in future shells
-echo "export PATH=$ELAN_HOME/bin:\$PATH" >> "$HOME/.bashrc"
