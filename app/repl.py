@@ -102,7 +102,6 @@ class Repl:
         )
 
         self._ps_proc = psutil.Process(self.proc.pid)
-        self._ps_proc.cpu_percent(None)
         self._cpu_max = 0.0
         self._cpu_task = self._loop.create_task(self._cpu_monitor())
 

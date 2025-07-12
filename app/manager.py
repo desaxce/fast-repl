@@ -123,9 +123,7 @@ class Manager:
             try:
                 await repl.start()
             except Exception as e:  # TODO: Make distincition between exceptions
-                logger.error(
-                    f"Failed to start REPL: {e}"
-                )  # TODO: Figure out error vs. exception
+                logger.exception(f"Failed to start REPL: {e}")
                 await self.destroy_repl(repl)
                 raise HTTPException(500, str(e)) from e
 
