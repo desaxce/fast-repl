@@ -134,10 +134,12 @@ class Manager:
             logger.info("Cleaning up REPL manager...")
             for repl in self._free:
                 await repl.close()
+                del repl
             self._free.clear()
 
             for repl in self._busy:
                 await repl.close()
+                del repl
             self._busy.clear()
 
             logger.info("REPL manager cleaned up!")

@@ -58,6 +58,7 @@ class Repl:
         self.uuid = uuid.uuid4()
         self._loop: asyncio.AbstractEventLoop | None = None
         self._cpu_max: float = 0.0
+        self._mem_max: int = 0
         # TODO: Implement cpu at repl level
         self._cpu_task: asyncio.Task[None] | None = None
         self._ps_proc: psutil.Process | None = None
@@ -104,6 +105,7 @@ class Repl:
         self._ps_proc = psutil.Process(self.proc.pid)
         self._cpu_max = 0.0
         self._cpu_task = self._loop.create_task(self._cpu_monitor())
+        self._mem_task = self._loop.create_task(self._mem_monitor())
 
         logger.info(f"\\[{self.uuid.hex[:8]}] Started")
 
@@ -115,6 +117,14 @@ class Repl:
                 usage += child.cpu_percent(None)
 
             self._cpu_max = max(self._cpu_max, usage)
+
+    async def _mem_monitor(self) -> None:
+        while self.is_running and self._ps_proc:
+            await asyncio.sleep(1)
+            total = self._ps_proc.memory_info().rss
+            for child in self._ps_proc.children(recursive=True):
+                total += child.memory_info().rss
+            self._mem_max = max(self._mem_max, total)
 
     @property
     def is_running(self) -> bool:
@@ -213,7 +223,7 @@ class Repl:
         diagnostics: Diagnostics = {
             "repl_uuid": str(self.uuid),
             "cpu_max": self._cpu_max,
-            "memory_max": 0,  # TODO: Implement memory usage
+            "memory_max": self._mem_max,
         }
 
         self.use_count += 1
@@ -245,3 +255,5 @@ class Repl:
             await self.proc.wait()
             if self._cpu_task:
                 self._cpu_task.cancel()
+            if self._mem_task:
+                self._mem_task.cancel()
