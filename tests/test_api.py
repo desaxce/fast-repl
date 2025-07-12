@@ -13,8 +13,8 @@ from utils import assert_json_equal
 from app.schemas import CheckRequest, CheckResponse
 
 
-@pytest.mark.asyncio  # type: ignore
-@pytest.mark.parametrize(  # type: ignore
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     "client",
     [
         {
@@ -54,7 +54,7 @@ async def test_repl_check_nat(client: TestClient) -> None:
     assert_json_equal(resp.json(), expected, ignore_keys=["time"])
 
 
-@pytest.mark.asyncio  # type: ignore
+@pytest.mark.asyncio
 async def test_single_snippet(client: TestClient) -> None:
     uuid = str(uuid4())
     payload = CheckRequest(
@@ -83,8 +83,8 @@ async def test_single_snippet(client: TestClient) -> None:
     assert_json_equal(resp.json(), expected, ignore_keys=["time"])
 
 
-@pytest.mark.asyncio  # type: ignore
-@pytest.mark.parametrize(  # type: ignore
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     "client",
     [
         {
@@ -130,8 +130,8 @@ async def test_repl_mathlib(client: TestClient) -> None:
     assert resp1.json()["time"] < 1
 
 
-@pytest.mark.asyncio  # type: ignore
-@pytest.mark.parametrize(  # type: ignore
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     "client",
     [
         {"MAX_REPLS": 1, "MAX_USES": 2},
@@ -251,8 +251,8 @@ async def test_repl_exhausted(client: TestClient) -> None:
     assert repl_uuid != resp.json()["diagnostics"]["repl_uuid"]
 
 
-@pytest.mark.asyncio  # type: ignore
-async def test_check_trailing_slash(client: TestClient):
+@pytest.mark.asyncio
+async def test_check_trailing_slash(client: TestClient) -> None:
     uuid = str(uuid4())
     payload = CheckRequest(
         snippets=[{"id": uuid, "code": "#check Nat"}],
