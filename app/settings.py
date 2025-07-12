@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     DATABASE_PORT: int = 5432
     DATABASE_URL: str = "postgresql://root:root@localhost:5432/fastrepl"
 
+    LEAN_VERSION: str = "v4.15.0"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     @field_validator("MAX_MEM", mode="before")

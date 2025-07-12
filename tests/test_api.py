@@ -11,6 +11,7 @@ from starlette import status
 from utils import assert_json_equal
 
 from app.schemas import CheckRequest, CheckResponse
+from app.settings import settings
 
 
 @pytest.mark.asyncio
@@ -171,22 +172,36 @@ async def test_repl_timeout(client: TestClient) -> None:
     resp = client.post("check", json=payload)
     assert resp.status_code == status.HTTP_200_OK
     assert resp.json()["diagnostics"]["repl_uuid"] != used_repl_uuid
-    expected = {
-        "id": uuid,
-        "response": {
-            "messages": [
-                {
-                    "severity": "info",
-                    "pos": {"line": 1, "column": 0},
-                    "endPos": {"line": 1, "column": 42},
-                    "data": "Goals accomplished!",
-                }
-            ],
-            "env": 0,
+
+    expecteds = {
+        "v4.19.0": {
+            "id": uuid,
+            "response": {
+                "messages": [
+                    {
+                        "severity": "info",
+                        "pos": {"line": 1, "column": 0},
+                        "endPos": {"line": 1, "column": 42},
+                        "data": "Goals accomplished!",
+                    }
+                ],
+                "env": 0,
+                "time": 0.450849,
+            },
+        },
+        "v4.15.0": {
+            "id": uuid,
+            "response": {
+                "env": 0,
+            },
             "time": 0.450849,
         },
     }
-    assert_json_equal(resp.json(), expected, ignore_keys=["time", "diagnostics"])
+    assert_json_equal(
+        resp.json(),
+        expected=expecteds[settings.LEAN_VERSION],
+        ignore_keys=["time", "diagnostics"],
+    )
 
 
 @pytest.mark.asyncio
