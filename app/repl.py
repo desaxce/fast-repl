@@ -126,28 +126,34 @@ class Repl:
     async def send_timeout(
         self, snippet: Snippet, timeout: float, debug: bool, is_header: bool = False
     ) -> CheckResponse:
+        error = None
+        cmd_response = None
+        elapsed_time = 0.0
+        diagnostics = Diagnostics(repl_uuid=str(self.uuid))
+
         try:
-            repl_response, elapsed_time, diagnostics = await asyncio.wait_for(
+            cmd_response, elapsed_time, diagnostics = await asyncio.wait_for(
                 self.send(snippet, debug=debug, is_header=is_header), timeout=timeout
-            )
+            )  # type: ignore
         except TimeoutError:
-            # TODO: set error message here.
-            logger.error("Lean REPL command timed out")
-            raise TimeoutError("Lean REPL command timed out")
+            elapsed_time = timeout
+            error = "Lean REPL command timed out"
+            logger.error(error)
         except LeanError as e:
             logger.error("Lean REPL error: {}", e)
             raise e
 
         return CheckResponse(
             id=snippet.id,
-            response=repl_response,
+            error=error,
+            response=cmd_response,
             time=elapsed_time,
-            diagnostics=diagnostics,
+            diagnostics=diagnostics if len(diagnostics) > 0 else None,
         )
 
     async def send(
         self, snippet: Snippet, debug: bool, is_header: bool = False
-    ) -> tuple[CommandResponse, float, Diagnostics | None]:
+    ) -> tuple[CommandResponse, float, Diagnostics]:
         await log_snippet(self.uuid, snippet.id, snippet.code)
 
         self._cpu_max = 0.0
@@ -224,7 +230,7 @@ class Repl:
         }
 
         self.use_count += 1
-        return resp, elapsed_time, (diagnostics if debug else None)
+        return resp, elapsed_time, (diagnostics if debug else {})
 
     async def close(self) -> None:
         if self.proc:

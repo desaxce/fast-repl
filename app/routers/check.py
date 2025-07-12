@@ -29,7 +29,7 @@ async def read_root() -> dict[str, str]:
 @router.post("/check", response_model=CheckResponse, response_model_exclude_none=True)  # type: ignore
 @router.post(
     "/check/",
-    include_in_schema=False,  # To not clutter OpenAPI spec
+    include_in_schema=False,  # To not clutter OpenAPI spec.
     response_model=CheckResponse,
     response_model_exclude_none=True,
 )  # type: ignore
@@ -53,7 +53,11 @@ async def check(  # type: ignore[reportUnusedFunction]
         raise HTTPException(429, "Unable to acquire a REPL")
 
     try:
-        await manager.prep(repl, header, snippet.id, timeout, debug)
+        check_response = await manager.prep(repl, header, snippet.id, timeout, debug)
+        if check_response is not None:
+            res = check_response.model_dump()
+            if "error" in check_response.model_dump() and res["error"]:
+                return check_response
     except NoAvailableReplError as e:
         raise HTTPException(500, str(e)) from e
 

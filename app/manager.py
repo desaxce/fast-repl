@@ -8,7 +8,7 @@ from loguru import logger
 
 from app.errors import NoAvailableReplError
 from app.repl import Repl
-from app.schemas import Snippet
+from app.schemas import CheckResponse, Snippet
 from app.settings import settings
 from app.utils import is_blank
 
@@ -118,7 +118,7 @@ class Manager:
 
     async def prep(
         self, repl: Repl, header: str, snippet_id: str, timeout: float, debug: bool
-    ) -> None:
+    ) -> CheckResponse | None:
         if not repl.is_running:
             try:
                 await repl.start()
@@ -131,7 +131,7 @@ class Manager:
 
             if not is_blank(header):
                 try:
-                    await repl.send_timeout(
+                    cmd_response = await repl.send_timeout(
                         Snippet(id=f"{snippet_id}-header", code=header),
                         timeout=timeout,
                         debug=debug,
@@ -141,3 +141,10 @@ class Manager:
                     logger.error(f"Failed to run header on REPL: {e}")
                     await self.destroy_repl(repl)
                     raise HTTPException(500, str(e)) from e
+
+                if cmd_response.error:
+                    logger.error(f"Header command failed: {cmd_response.error}")
+                    await self.destroy_repl(repl)
+                return cmd_response
+            return None  # TODO: store first header command response
+        return None

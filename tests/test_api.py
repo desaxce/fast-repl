@@ -138,24 +138,27 @@ async def test_repl_mathlib(client: TestClient) -> None:
     ],
     indirect=True,
 )
-# @pytest.mark.skip(reason="Need to wait till header-based repls cache implemented")
 async def test_repl_timeout(client: TestClient) -> None:
-    # TODO: we need to ensure same REPL used twice, so max_repls = 1 and max_uses >=2
-    # TODO: add option which says which REPL tackled validation.
+    # Maximum of one REPL with two uses so that REPL can be reused.
     uuid = str(uuid4())
     payload = CheckRequest(
         snippets=[{"id": uuid, "code": "import Mathlib"}],
-        timeout=1,  # Set a short timeout to trigger a timeout error
+        timeout=1,  # Short timeout to trigger a timeout error
+        debug=True,
     ).model_dump()
     try:
         resp = client.post("check", json=payload)
     except Exception as e:
         logger.info(f"Error during request: {e}")
         logger.info(resp.status_code)
-    assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert resp.status_code == status.HTTP_200_OK
+    assert "diagnostics" in resp.json()
+    assert "repl_uuid" in resp.json()["diagnostics"]
+
     logger.info(resp.json())
 
-    assert "timed out" in resp.json()["detail"]
+    used_repl_uuid = resp.json()["diagnostics"]["repl_uuid"]
+    assert "timed out" in resp.json()["error"]
 
     await asyncio.sleep(5)  # 5 seconds should be enough to load Mathlib
 
@@ -163,11 +166,11 @@ async def test_repl_timeout(client: TestClient) -> None:
     payload = CheckRequest(
         snippets=[{"id": uuid, "code": "theorem one_plus_one : 1 + 1 = 2 := by rfl"}],
         timeout=5,
+        debug=True,
     ).model_dump()
     resp = client.post("check", json=payload)
     assert resp.status_code == status.HTTP_200_OK
-    # TODO: assert same repl used - probably not actually, since the first timedout.
-    # But should assert that only max_repl = 1 and that it's reusable >=1
+    assert resp.json()["diagnostics"]["repl_uuid"] != used_repl_uuid
     expected = {
         "id": uuid,
         "response": {
