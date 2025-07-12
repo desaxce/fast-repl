@@ -149,11 +149,14 @@ class Repl:
             error = f"Lean REPL command timed out in {timeout} seconds"
             logger.error(error)
         except LeanError as e:
-            logger.error("Lean REPL error: %s", e)
+            logger.exception("Lean REPL error: %s", e)
+            raise e
+        except ReplError as e:
+            logger.exception("REPL error: %s", e)
             raise e
 
         return CheckResponse(
-            id=snippet.id,
+            custom_id=snippet.custom_id,
             error=error,
             response=cmd_response,
             time=elapsed_time,
@@ -163,9 +166,10 @@ class Repl:
     async def send(
         self, snippet: Snippet, debug: bool, is_header: bool = False
     ) -> tuple[CommandResponse, float, Diagnostics]:
-        await log_snippet(self.uuid, snippet.id, snippet.code)
+        await log_snippet(self.uuid, snippet.custom_id, snippet.code)
 
         self._cpu_max = 0.0
+        self._mem_max = 0
 
         if not self.proc or self.proc.returncode is not None:
             logger.error("REPL process not started or shut down")

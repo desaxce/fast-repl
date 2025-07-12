@@ -20,11 +20,14 @@ class Manager:
         max_repls: int = settings.MAX_REPLS,
         max_uses: int = settings.MAX_USES,
         max_mem: int = settings.MAX_MEM,
+        init_repls: dict[str, int] = settings.INIT_REPLS,
     ) -> None:
 
         self.max_repls = max_repls
         self.max_uses = max_uses
         self.max_mem = max_mem
+        self.init_repls = init_repls
+
         self._lock = asyncio.Lock()
         self._free: list[Repl] = []
         self._busy: set[Repl] = set()
@@ -40,12 +43,12 @@ class Manager:
         )
 
     async def initialize_repls(self) -> None:
-        if self.max_repls < sum(settings.INIT_REPLS.values()):
+        if self.max_repls < sum(self.init_repls.values()):
             raise ValueError(
-                f"Cannot initialize REPLs: Σ (INIT_REPLS values) = {sum(settings.INIT_REPLS.values())} > {self.max_repls} = MAX_REPLS"
+                f"Cannot initialize REPLs: Σ (INIT_REPLS values) = {sum(self.init_repls.values())} > {self.max_repls} = MAX_REPLS"
             )
         initialized_repls: list[Repl] = []
-        for header, count in settings.INIT_REPLS.items():
+        for header, count in self.init_repls.items():
             for _ in range(count):
                 initialized_repls.append(await self.get_repl(header=header))
 
@@ -55,9 +58,7 @@ class Manager:
 
         await asyncio.gather(*(_prep_and_release(r) for r in initialized_repls))
 
-        logger.info(
-            f"Initialized REPLs with: {json.dumps(settings.INIT_REPLS, indent=2)}"
-        )
+        logger.info(f"Initialized REPLs with: {json.dumps(self.init_repls, indent=2)}")
 
     async def get_repl(self, header: str = "", snippet_id: str = "") -> Repl:
         """
@@ -161,7 +162,7 @@ class Manager:
         if not is_blank(repl.header):
             try:
                 cmd_response = await repl.send_timeout(
-                    Snippet(id=f"{snippet_id}-header", code=repl.header),
+                    Snippet(custom_id=f"{snippet_id}-header", code=repl.header),
                     timeout=timeout,
                     debug=debug,
                     is_header=True,

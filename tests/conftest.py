@@ -14,7 +14,7 @@ from app.settings import Settings
 
 @pytest.fixture(
     params=[
-        {"MAX_REPLS": 5, "MAX_USES": 10},
+        {"MAX_REPLS": 5, "MAX_USES": 10, "INIT_REPLS": {}},
     ]
 )
 def client(request: FixtureRequest) -> TestClient:

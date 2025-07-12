@@ -7,6 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette import status
 
+from app.schemas import ChecksRequest
+
 INPUT_DIR = os.path.join("tests", "match", "input")
 OUTPUT_DIR = os.path.join("tests", "match", "output")
 
@@ -26,8 +28,9 @@ def assert_eq_mod_time(expected: object, actual: object) -> None:
     """
     Assert that two objects are equal, ignoring the 'time' key in the actual object.
     """
-    expected = prune(expected, {"time", "env", "custom_id"})
-    actual = prune(actual, {"time", "env", "custom_id"})
+    expected = prune(expected, {"time", "env", "error"})
+    actual = prune(actual, {"time", "env", "error"})
+
     assert (
         expected == actual
     ), f"Expected {json.dumps(expected, indent=2)}, got {json.dumps(actual, indent=2)}"
@@ -53,23 +56,30 @@ def test_match(client: TestClient, input_file: str, expected_file: str) -> None:
         proof_code = f.read()
 
     with open(expected_file, "r", encoding="utf-8") as f:
-        expected_response = json.load(f)["results"][0]
+        expected_response = json.load(f)
 
-    if "response" not in expected_response or expected_response["response"] is None:
+    if (
+        "response" not in expected_response["results"][0]
+        or expected_response["results"][0]["response"] is None
+    ):
         pytest.skip(
             f"Expected response does not contain 'response' key in {expected_file}"
         )
     problem_id = os.path.splitext(os.path.basename(input_file))[0]
+    if problem_id.startswith("goedel-"):  # TODO: move to goedel dir
+        problem_id = problem_id[7:]
 
-    data = {
-        "snippets": [{"id": problem_id, "code": proof_code}],
-        "timeout": 60,
-    }
+    payload = ChecksRequest(
+        snippets=[{"custom_id": problem_id, "code": proof_code}],
+        timeout=60,
+    ).model_dump()
 
-    response = client.post("/check", json=data)
+    response = client.post("/checks", json=payload)
     assert response.status_code == status.HTTP_200_OK
     response = response.json()
 
-    assert "error" not in response, "Response should not contain 'error' key"
-    assert "response" in response, "Response should contain 'response' key"
-    assert_eq_mod_time(expected_response["response"], response["response"])
+    assert (
+        "error" not in response["results"][0]
+    ), f"Error in response for {input_file}: {response['results'][0]['error']}"
+
+    assert_eq_mod_time(expected_response, response)

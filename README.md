@@ -16,7 +16,7 @@ export API_KEY="secret123"
 docker-compose up -d
 curl -H "Authorization: Bearer secret123" \
      -X POST http://localhost:8000/api/check \
-     -d '{"snippets":[{"id":"1","code":"..." }],"timeout":5}' \
+     -d '{"snippets":[{"custom_id":"1","code":"..." }],"timeout":5}' \
      -H "Content-Type: application/json"
 ```
 
@@ -26,7 +26,7 @@ And test with:
 ```
 curl -X POST http://localhost:8000/api/check \ 
   -H "Content-Type: application/json" \
-  -d '{"snippets": [{"id": "truc", "code":"#check 1 + 1"}]}' | jq
+  -d '{"snippets": [{"custom_id": "truc", "code":"#check 1 + 1"}]}' | jq
 ```
 
 Environment variables to configure the REPL manager:

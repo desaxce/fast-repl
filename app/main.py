@@ -37,9 +37,9 @@ def create_app(settings: Settings) -> FastAPI:
             max_repls=settings.MAX_REPLS,
             max_uses=settings.MAX_USES,
             max_mem=settings.MAX_MEM,
+            init_repls=settings.INIT_REPLS,
         )
         app.state.manager = manager
-        logger.info(settings.INIT_REPLS)
         await app.state.manager.initialize_repls()
 
         yield
