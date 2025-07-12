@@ -189,13 +189,13 @@ async def test_repl_timeout(client: TestClient) -> None:
     assert_json_equal(resp.json(), expected, ignore_keys=["time", "diagnostics"])
 
 
-@pytest.mark.asyncio  # type: ignore
-@pytest.mark.parametrize(  # type: ignore
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     "client",
     [
         {"MAX_REPLS": 1, "MAX_USES": 3},
     ],
-    indirect=True,  # todo: what does this do
+    indirect=True,  # To parametrize fixture
 )
 async def test_repl_exhausted(client: TestClient) -> None:
     payload = CheckRequest(

@@ -42,8 +42,9 @@ markers = [
 [tool.mypy]
 plugins = ['pydantic.mypy']
 strict = true
-files = ["app"]
+files = ["app", "tests"]
 ignore_missing_imports = true
+allow_untyped_decorators=true
 disable_error_code = [
     "unused-ignore", 
 ]
