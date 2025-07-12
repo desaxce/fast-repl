@@ -139,7 +139,7 @@ class Repl:
             error = "Lean REPL command timed out"
             logger.error(error)
         except LeanError as e:
-            logger.error("Lean REPL error: {}", e)
+            logger.error("Lean REPL error: %s", e)
             raise e
 
         return CheckResponse(
@@ -158,14 +158,15 @@ class Repl:
         self._cpu_max = 0.0
 
         if not self.proc or self.proc.returncode is not None:
-            # TODO: Don't make it a Lean error.
-            logger.error("Process not started")
-            raise LeanError("Process not started")
+            logger.error("REPL process not started or shut down")
+            raise ReplError("REPL process not started or shut down")
 
         loop = self._loop or asyncio.get_running_loop()
 
-        assert self.proc.stdin is not None, "stdin pipe not initialized"
-        assert self.proc.stdout is not None, "stdout pipe not initialized"
+        if self.proc.stdin is None:
+            raise ReplError("stdin pipe not initialized")
+        if self.proc.stdout is None:
+            raise ReplError("stdout pipe not initialized")
 
         input: Command = {"cmd": snippet.code}
 
@@ -183,42 +184,29 @@ class Repl:
             self.proc.stdin.write(payload)
             await self.proc.stdin.drain()
         except BrokenPipeError:
-            logger.error("Broken pipe when writing to REPL stdin")
+            logger.error("Broken pipe while writing to REPL stdin")
             raise LeanError("Lean process broken pipe")
         except Exception as e:
-            logger.error("Failed to write to REPL stdin: {}", e)
+            logger.error("Failed to write to REPL stdin: %s", e)
             raise LeanError("Failed to write to REPL stdin")
 
         logger.debug("Reading response from REPL stdout")
-        lines: list[bytes] = []
-        try:
-            while True:
-                line = await self.proc.stdout.readline()
-                if not line.strip():
-                    break
-                lines.append(line)
-        except Exception as e:
-            logger.error("Failed to read from REPL stdout: {}", e)
-            # TODO: When raw = b'', REPL process likely dead.
-            raise LeanError("Failed to read from REPL stdout")
-
-        logger.debug("Finished reading response from REPL stdout")
+        raw = await self._read_response()
         elapsed = loop.time() - start
 
-        raw = b"".join(lines)
-        logger.debug("Raw response from REPL: {}", raw)
+        logger.debug("Raw response from REPL: %r", raw)
         try:
             resp: CommandResponse = json.loads(raw)
         except json.JSONDecodeError:
-            logger.error("JSON decode error: {}", raw)
+            logger.error("JSON decode error: %r", raw)
             raise ReplError("JSON decode error")
 
         self.error_file.seek(0)
         err = self.error_file.read().strip()
-        self.error_file.truncate(0)
         self.error_file.seek(0)
+        self.error_file.truncate(0)
         if err:
-            logger.error("Stderr: {}", err)
+            logger.error("Stderr: %s", err)
             raise LeanError(err)
 
         elapsed_time = round(elapsed, 6)
@@ -230,6 +218,24 @@ class Repl:
 
         self.use_count += 1
         return resp, elapsed_time, (diagnostics if debug else {})
+
+    async def _read_response(self) -> bytes:
+        if not self.proc or self.proc.stdout is None:
+            logger.error("REPL process not started or stdout pipe not initialized")
+            raise ReplError("REPL process not started or stdout pipe not initialized")
+
+        lines: list[bytes] = []
+        try:
+            while True:
+                chunk = await self.proc.stdout.readline()
+                # EOF or blank line as terminator
+                if not chunk or not chunk.strip():
+                    break
+                lines.append(chunk)
+        except Exception as e:
+            logger.error("Failed to read from REPL stdout: %s", e)
+            raise LeanError("Failed to read from REPL stdout")
+        return b"".join(lines)
 
     async def close(self) -> None:
         if self.proc:
