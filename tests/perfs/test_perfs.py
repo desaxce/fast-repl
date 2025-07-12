@@ -77,14 +77,22 @@ async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
                 ]  # skip this one, it's too long
             ]
 
-            all_results = await asyncio.gather(*tasks)
+            all_results = await asyncio.gather(
+                *tasks
+            )  # TODO: run check as they proofs finish
             for idx, result in enumerate(all_results):
                 assert "response" in result, f"response #{idx} missing 'response' key"
-                assert "messages" in result["response"]
-                assert any(
-                    msg["data"] == "Goals accomplished!"
-                    for msg in result["response"]["messages"]
-                ), f"Proof #{idx} did not accomplish goals: {pformat(result['response']['messages'])}"
+                if settings.LEAN_VERSION == "v4.15.0":
+                    assert "messages" not in result["response"] or not any(
+                        msg["severity"] == "error"
+                        for msg in result["response"]["messages"]
+                    ), f"Proof #{idx} contains errors: {pformat(result['response']['messages'])}"
+                else:
+                    assert "messages" in result["response"]
+                    assert any(
+                        msg["data"] == "Goals accomplished!"
+                        for msg in result["response"]["messages"]
+                    ), f"Proof #{idx} did not accomplish goals: {pformat(result['response']['messages'])}"
     logger.info(
         f"min: {min(times):.2f} s, max: {max(times):.2f} s and mean: {mean(times):.2f} s"
     )
