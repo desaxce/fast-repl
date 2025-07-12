@@ -133,7 +133,7 @@ class Repl:
         try:
             cmd_response, elapsed_time, diagnostics = await asyncio.wait_for(
                 self.send(snippet, debug=debug, is_header=is_header), timeout=timeout
-            )  # type: ignore
+            )
         except TimeoutError:
             elapsed_time = timeout
             error = "Lean REPL command timed out"
