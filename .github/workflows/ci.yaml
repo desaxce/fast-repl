@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BASE: ${{ github.workspace }}
+      # PATH: /custom/bin:${{ env.PATH }}
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +45,7 @@ jobs:
         
       - name: Add lake binary to PATH
         run: |
-          echo "$ELAN_HOME/bin" >> $GITHUB_PATH
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
       - name: Verify lake
         run: which lake
       - name: Run tests
