@@ -4,6 +4,7 @@ import json
 from typing import Any, Literal
 
 import pytest
+from _pytest.fixtures import FixtureRequest
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
@@ -15,8 +16,8 @@ from app.settings import Settings
     params=[
         {"MAX_REPLS": 5, "MAX_USES": 10},
     ]
-)  # type: ignore
-def client(request):
+)
+def client(request: FixtureRequest) -> TestClient:
     overrides = getattr(request, "param", {})
     s = Settings(_env_file=None)
     for k, v in overrides.items():
@@ -42,12 +43,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
-@pytest.fixture(scope="session")  # type: ignore
+@pytest.fixture(scope="session")
 def perf_rows(request: pytest.FixtureRequest) -> int:
     return int(request.config.getoption("--perfs-rows"))
 
 
-@pytest.fixture(scope="session")  # type: ignore
+@pytest.fixture(scope="session")
 def perf_shuffle(request: pytest.FixtureRequest) -> bool:
     return bool(request.config.getoption("--perfs-shuffle"))
 

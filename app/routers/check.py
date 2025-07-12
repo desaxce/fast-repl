@@ -18,14 +18,14 @@ def get_manager(request: Request) -> Manager:
     return cast(Manager, request.app.state.manager)
 
 
-@router.post("/check", response_model=CheckResponse, response_model_exclude_none=True)  # type: ignore
+@router.post("/check", response_model=CheckResponse, response_model_exclude_none=True)
 @router.post(
     "/check/",
     include_in_schema=False,  # To not clutter OpenAPI spec.
     response_model=CheckResponse,
     response_model_exclude_none=True,
-)  # type: ignore
-async def check(  # type: ignore[reportUnusedFunction]
+)
+async def check(
     request: CheckRequest, manager: Manager = Depends(get_manager)
 ) -> CheckResponse:
     if not request.snippets:

@@ -21,8 +21,8 @@ from app.schemas import CheckRequest, CheckResponse
 from app.settings import settings
 
 
-@pytest.mark.perfs  # type: ignore[misc]
-@pytest.mark.asyncio  # type: ignore[misc]
+@pytest.mark.perfs
+@pytest.mark.asyncio
 async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
 
     ds = load_dataset(

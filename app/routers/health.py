@@ -7,7 +7,7 @@ router = APIRouter()
 
 
 # TODO: summary, and description
-@router.get("/health")  # type: ignore
-@router.get("/health/", include_in_schema=False)  # type: ignore
+@router.get("/health")
+@router.get("/health/", include_in_schema=False)
 async def read_root() -> dict[str, str]:
     return {"message": "Hello, World!"}

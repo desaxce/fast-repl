@@ -4,7 +4,7 @@ from app.errors import NoAvailableReplError
 from app.manager import Manager
 
 
-@pytest.mark.asyncio  # type: ignore
+@pytest.mark.asyncio
 async def test_get_repl() -> None:
     manager = Manager(max_repls=1, max_uses=1)
 
@@ -15,7 +15,7 @@ async def test_get_repl() -> None:
     await manager.release_repl(repl)
 
 
-@pytest.mark.asyncio  # type: ignore
+@pytest.mark.asyncio
 async def test_exhausted() -> None:
     manager = Manager(max_repls=0, max_uses=1)
 
