@@ -6,7 +6,7 @@ from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):  # type: ignore[misc]
+class Settings(BaseSettings):
     BASE: str = Field(default_factory=os.getcwd)
     repl_bin_path: str = ""
     path_to_mathlib: str | None = None
@@ -36,7 +36,7 @@ class Settings(BaseSettings):  # type: ignore[misc]
             return n if unit.lower() == "m" else n * 1024
         raise ValueError("MAX_MEM must be an int or '<number>[M|G]'")
 
-    @model_validator(mode="after")  # type: ignore
+    @model_validator(mode="after")
     def set_defaults(self) -> "Settings":
         if self.repl_bin_path == "":
             self.repl_bin_path = self.BASE + "/repl/.lake/build/bin/repl"
