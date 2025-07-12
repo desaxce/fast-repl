@@ -1,13 +1,22 @@
 services:
   api: # TODO: Add test using container
-    # image: fast-repl:latest
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        LEAN_VERSION: v4.15.0
+        APP_VERSION: ${APP_VERSION}
+    image: fast-repl:0.1.0
     ports:
       - 8000:8000
     environment:
       - API_KEY=${API_KEY}
     volumes:
-      - ./data:/app/data      # for a small SQLite file
+      - ./data:/app/data      # for a small SQLite file -> to remove
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      retries: 5
     command: uvicorn app.main:app --host 0.0.0.0
   postgres: # TODO: Add prisma python + basic schema
     image: postgres:17-alpine
@@ -20,3 +29,10 @@ services:
       - POSTGRES_DB=${DATABASE_NAME}
     ports:
       - "${DATABASE_PORT}:${DATABASE_PORT}"
+  test:
+    image: curlimages/curl
+    profiles: ["test"]
+    depends_on:
+      api:
+        condition: service_healthy
+    entrypoint: ["curl","-f","http://api:8000/health"]

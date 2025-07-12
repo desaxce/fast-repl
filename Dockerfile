@@ -1,6 +1,9 @@
 FROM python:3.13-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG APP_VERSION
+ENV APP_VERSION=${APP_VERSION}
+LABEL version="${APP_VERSION}"
 
 # Environment settings
 ENV BASE=/root \

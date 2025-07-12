@@ -33,7 +33,7 @@ class Manager:
             self._free.append(Repl(max_mem=max_mem, max_uses=max_uses))
 
         logger.info(
-            "[Manager] Initialized with: \n  MAX_REPLS={},\n  MAX_USES={},\n  MAX_MEM={}",
+            "[Manager] Initialized with: \n  MAX_REPLS={},\n  MAX_USES={},\n  MAX_MEM={} MB",
             max_repls,
             max_uses,
             max_mem,

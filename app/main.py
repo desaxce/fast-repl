@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from importlib.metadata import PackageNotFoundError, version
 from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI
@@ -8,7 +9,13 @@ from rich.logging import RichHandler
 
 from app.manager import Manager
 from app.routers.check import router as check_router
+from app.routers.health import router as health_router
 from app.settings import Settings
+
+try:
+    __version__ = version("fast-repl")
+except PackageNotFoundError:
+    __version__ = "0.0.0"  # fallback for local dev
 
 
 def no_sort(self: GenerateJsonSchema, value: Any, parent_key: Any = None) -> Any:
@@ -42,7 +49,7 @@ def create_app(settings: Settings) -> FastAPI:
         lifespan=lifespan,
         title="Lean 4 Proof-Check API",
         description="Submit Lean 4 snippets to be checked/validated via REPL",
-        version="0.1.0",  # use same version as in pyproject.toml
+        version=__version__,
         openapi_url="/api/openapi.json",
         docs_url="/docs",
         redoc_url="/redoc",
@@ -53,6 +60,10 @@ def create_app(settings: Settings) -> FastAPI:
         check_router,
         prefix="/api",
         tags=["check"],
+    )
+    app.include_router(
+        health_router,
+        tags=["health"],
     )
     return app
 

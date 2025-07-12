@@ -18,14 +18,6 @@ def get_manager(request: Request) -> Manager:
     return cast(Manager, request.app.state.manager)
 
 
-# TODO: summary, and description (tags set during include_router)
-# TODO: make it a health endpoint + add stats
-@router.get("/")  # type: ignore
-async def read_root() -> dict[str, str]:
-    """Health check or welcome endpoint"""
-    return {"message": "Hello, World!"}
-
-
 @router.post("/check", response_model=CheckResponse, response_model_exclude_none=True)  # type: ignore
 @router.post(
     "/check/",
