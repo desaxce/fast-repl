@@ -29,7 +29,7 @@ def assert_eq_mod_time(expected: object, actual: object) -> None:
     Assert that two objects are equal, ignoring the 'time' key in the actual object.
     """
     expected = prune(expected, {"time", "env", "error"})
-    actual = prune(actual, {"time", "env", "error"})
+    actual = prune(actual, {"time", "env", "error", "diagnostics"})
 
     assert (
         expected == actual
@@ -69,9 +69,9 @@ def test_match(client: TestClient, input_file: str, expected_file: str) -> None:
     if problem_id.startswith("goedel-"):  # TODO: move to goedel dir
         problem_id = problem_id[7:]
 
+    # Todo: Pass in infotree arg + create lean client
     payload = ChecksRequest(
-        snippets=[{"custom_id": problem_id, "code": proof_code}],
-        timeout=60,
+        snippets=[{"custom_id": problem_id, "code": proof_code}], timeout=60, debug=True
     ).model_dump()
 
     response = client.post("/checks", json=payload)

@@ -59,13 +59,13 @@ class Repl:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._cpu_max: float = 0.0
         self._mem_max: int = 0
-        # TODO: Implement cpu at repl level
+        # TODO: Implement cpu at repl level as a list of all cpu max across execs of send()
         self._cpu_task: asyncio.Task[None] | None = None
         self._ps_proc: psutil.Process | None = None
 
     @property
     def exhausted(self) -> bool:
-        if self.header and not is_blank(self.header):  # todo: fix this header part
+        if self.header and not is_blank(self.header):  # Todo: fix this header part
             return self.use_count >= self.max_uses + 1
 
         return self.use_count >= self.max_uses
