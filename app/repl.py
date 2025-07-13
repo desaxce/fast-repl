@@ -129,7 +129,7 @@ class Repl:
         for child in self._ps_proc.children(recursive=True):
             usage += child.cpu_percent(None)
 
-        return int(usage)
+        return float(usage)
 
     async def get_current_memory_usage(self) -> int:
         if not self.is_running or not self._ps_proc:
