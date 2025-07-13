@@ -1,3 +1,4 @@
+import shutil
 from contextlib import asynccontextmanager
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any, AsyncGenerator
@@ -5,6 +6,7 @@ from typing import Any, AsyncGenerator
 from fastapi import FastAPI
 from loguru import logger
 from pydantic.json_schema import GenerateJsonSchema
+from rich.console import Console
 from rich.logging import RichHandler
 
 from app.manager import Manager
@@ -36,8 +38,12 @@ def create_app(settings: Settings) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         if settings.DATABASE_URL:
-            await prisma.connect()
-        logger.info("Connected to database")
+            try:
+                await prisma.connect()
+                logger.info("Connected to database")
+            except Exception as e:
+                logger.exception("Failed to connect to database: %s", e)
+
         manager = Manager(
             max_repls=settings.MAX_REPLS,
             max_uses=settings.MAX_USES,
@@ -50,7 +56,12 @@ def create_app(settings: Settings) -> FastAPI:
         yield
 
         await app.state.manager.cleanup()
-        await prisma.disconnect()
+        if settings.DATABASE_URL:
+            try:
+                await prisma.disconnect()
+            except Exception as e:
+                logger.exception("Failed to disconnect from database: %s", e)
+
         logger.info("Disconnected from database")
 
     app = FastAPI(
@@ -82,9 +93,11 @@ def create_app(settings: Settings) -> FastAPI:
 
 settings = Settings()
 
+terminal_width, _ = shutil.get_terminal_size()
+
 logger.remove()
 logger.add(
-    RichHandler(show_time=True, markup=True),
+    RichHandler(console=Console(width=terminal_width), show_time=True, markup=True),
     colorize=True,
     level=settings.LOG_LEVEL,
     format="{message}",

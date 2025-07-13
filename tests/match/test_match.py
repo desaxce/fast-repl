@@ -74,7 +74,7 @@ def test_match(client: TestClient, input_file: str, expected_file: str) -> None:
         snippets=[{"custom_id": problem_id, "code": proof_code}], timeout=60, debug=True
     ).model_dump()
 
-    response = client.post("/checks", json=payload)
+    response = client.post("/checks", json=payload)  # TODO: use backward API
     assert response.status_code == status.HTTP_200_OK
     response = response.json()
 

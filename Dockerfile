@@ -14,7 +14,8 @@ ENV BASE=/root \
     MAX_USES=10 \
     MAX_MEM=8G \
     INIT_REPLS={"import Mathlib\nimport Aesop":1} \
-    LEAN_VERSION=v4.15.0
+    LEAN_VERSION=v4.15.0 \
+    DATABASE_URL= 
 
 
 # Update the package list and install dependencies

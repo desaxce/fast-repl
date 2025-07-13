@@ -33,9 +33,6 @@ class Manager:
         self._free: list[Repl] = []
         self._busy: set[Repl] = set()
 
-        for _ in range(max_repls):
-            self._free.append(Repl(max_mem=max_mem, max_uses=max_uses))
-
         logger.info(
             "[Manager] Initialized with: \n  MAX_REPLS={},\n  MAX_USES={},\n  MAX_MEM={} MB",
             max_repls,

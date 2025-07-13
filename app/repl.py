@@ -31,7 +31,7 @@ async def log_snippet(uuid: uuid.UUID, snippet_id: str, code: str) -> None:
         "lean",
         theme="solarized-dark",
         line_numbers=False,
-        word_wrap=False,
+        word_wrap=True,
     )
 
     async with log_lock:

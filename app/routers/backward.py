@@ -9,8 +9,8 @@ from app.schemas import Snippet, VerifyRequestBody
 router = APIRouter()
 
 
-@router.post("/one_pass_verify_batch")
-@router.post("/verify")
+@router.post("/one_pass_verify_batch", response_model_exclude_none=True)
+@router.post("/verify", response_model_exclude_none=True)
 async def one_pass_verify_batch(
     body: VerifyRequestBody,
     manager: Manager = Depends(get_manager),
@@ -35,12 +35,12 @@ async def one_pass_verify_batch(
         resp = None
         if result.response is not None:
             resp = dict(result.response)
+            resp["time"] = result.time
         result_with_time_in_response = {
             "custom_id": result.custom_id,
             "error": result.error,
+            "response": resp,
         }
-        if resp is not None:
-            resp["time"] = result.time
         results_with_time_in_response.append(result_with_time_in_response)
 
     return {"results": results_with_time_in_response}

@@ -9,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BASE: ${{ github.workspace }}
-      # PATH: /custom/bin:${{ env.PATH }}
     steps:
       - uses: actions/checkout@v4
 
