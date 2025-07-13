@@ -4,9 +4,9 @@ import os
 import platform
 import signal
 import tempfile
-import uuid
 from asyncio.subprocess import Process
-from time import time
+from datetime import datetime
+from uuid import UUID
 
 import psutil
 from loguru import logger
@@ -14,6 +14,7 @@ from rich.console import Console
 from rich.syntax import Syntax
 
 from app.errors import LeanError, ReplError
+from app.prisma_client import prisma
 from app.schemas import CheckResponse, Command, CommandResponse, Diagnostics, Snippet
 from app.settings import settings
 from app.utils import is_blank
@@ -22,7 +23,7 @@ log_lock = asyncio.Lock()
 console = Console(log_time_format="[%m/%d/%y %H:%M:%S]", force_terminal=True)
 
 
-async def log_snippet(uuid: uuid.UUID, snippet_id: str, code: str) -> None:
+async def log_snippet(uuid: UUID, snippet_id: str, code: str) -> None:
     header = (
         f"\\[{uuid.hex[:8]}] Running snippet [bold magenta]{snippet_id}[/bold magenta]:"
     )
@@ -42,16 +43,18 @@ async def log_snippet(uuid: uuid.UUID, snippet_id: str, code: str) -> None:
 class Repl:
     def __init__(
         self,
+        uuid: UUID,
+        created_at: datetime,
         header: str = "",
         *,
         max_mem: int = settings.MAX_MEM,
         max_uses: int = settings.MAX_USES,
     ) -> None:
         # TODO: Change error file to PIPE
-        self.uuid = uuid.uuid4()
-        self.created_at: float = time()
+        self.uuid = uuid
         self.header = header
         self.use_count = 0
+        self.created_at = created_at
 
         self.proc: Process | None = None
         self.error_file = tempfile.TemporaryFile("w+")
@@ -71,6 +74,23 @@ class Repl:
         self._ps_proc: psutil.Process | None = None
         self._cpu_task: asyncio.Task[None] | None = None
         self._mem_task: asyncio.Task[None] | None = None
+
+    @classmethod
+    async def create(cls, header: str = "") -> "Repl":
+        record = await prisma.repl.create(
+            data={
+                "header": header,
+                "max_uses": settings.MAX_USES,
+                "max_mem": settings.MAX_MEM,
+            }
+        )
+        return cls(
+            uuid=UUID(record.uuid),
+            created_at=record.created_at,
+            header=record.header,
+            max_uses=record.max_uses,
+            max_mem=record.max_mem,
+        )
 
     @property
     def exhausted(self) -> bool:

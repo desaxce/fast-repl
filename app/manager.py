@@ -88,7 +88,7 @@ class Manager:
                         return repl
                 total = len(self._free) + len(self._busy)
                 if total < self.max_repls:
-                    return self.start_new(header)
+                    return await self.start_new(header)
 
                 if self._free:
                     oldest = min(self._free, key=lambda r: r.created_at)
@@ -98,7 +98,7 @@ class Manager:
                     await oldest.close()
                     del oldest
                     logger.info(f"Destroyed REPL {uuid.hex[:8]}")
-                    return self.start_new(header)
+                    return await self.start_new(header)
 
                 remaining = deadline - time()
                 if remaining <= 0:
@@ -139,9 +139,8 @@ class Manager:
             logger.info(f"\\[{repl.uuid.hex[:8]}] Released!")
             self._cond.notify(1)
 
-    def start_new(self, header: str) -> Repl:
-        repl = Repl(max_mem=self.max_mem, max_uses=self.max_uses, header=header)
-        repl.created_at = time()
+    async def start_new(self, header: str) -> Repl:
+        repl = await Repl.create(header)
         self._busy.add(repl)
         return repl
 
