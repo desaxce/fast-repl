@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import Enum
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
+
+
+class ReplStatus(str, Enum):
+    RUNNING = "RUNNING"
+    STOPPED = "STOPPED"
 
 
 class Repl(BaseModel):
@@ -13,7 +19,7 @@ class Repl(BaseModel):
     max_uses: int
     max_mem: int
     header: str
-    # TODO: include status for repl
+    status: ReplStatus
 
 
 class Proof(BaseModel):

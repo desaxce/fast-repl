@@ -15,6 +15,7 @@ from rich.syntax import Syntax
 
 from app.db import db
 from app.errors import LeanError, ReplError
+from app.models import ReplStatus
 from app.prisma_client import prisma
 from app.schemas import CheckResponse, Command, CommandResponse, Diagnostics, Snippet
 from app.settings import settings
@@ -324,3 +325,8 @@ class Repl:
                 self._cpu_task.cancel()
             if self._mem_task:
                 self._mem_task.cancel()
+
+            await prisma.repl.update(
+                where={"uuid": str(self.uuid)},
+                data={"status": ReplStatus.STOPPED},  # type: ignore
+            )

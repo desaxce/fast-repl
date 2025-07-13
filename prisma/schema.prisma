@@ -8,12 +8,18 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
+enum ReplStatus {
+    RUNNING
+    STOPPED
+}
+
 model Repl {
-    uuid       String   @id @default(uuid()) @db.Uuid
-    created_at DateTime @default(now())
+    uuid       String     @id @default(uuid()) @db.Uuid
+    created_at DateTime   @default(now())
     max_uses   Int
     max_mem    Int
     header     String
+    status     ReplStatus @default(RUNNING)
     proofs     Proof[]
 }
 
