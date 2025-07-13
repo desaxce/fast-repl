@@ -24,7 +24,7 @@ def get_manager(request: Request) -> Manager:
     return cast(Manager, request.app.state.manager)
 
 
-async def _run_checks(
+async def run_checks(
     snippets: list[Snippet], timeout: float, debug: bool, manager: Manager
 ) -> (
     CompatibleCheckResponse
@@ -86,7 +86,7 @@ async def _run_checks(
 async def check_batch(
     request: ChecksRequest, manager: Manager = Depends(get_manager)
 ) -> CompatibleCheckResponse:
-    return await _run_checks(
+    return await run_checks(
         request.snippets, float(request.timeout), request.debug, manager
     )
 
@@ -105,7 +105,7 @@ async def check_batch(
 async def check_single(
     request: CheckRequest, manager: Manager = Depends(get_manager)
 ) -> CheckResponse:
-    resp_list = await _run_checks(
+    resp_list = await run_checks(
         [request.snippet], float(request.timeout), request.debug, manager
     )
     return resp_list.results[0]

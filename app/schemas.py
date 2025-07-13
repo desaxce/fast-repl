@@ -3,6 +3,25 @@ from typing import Any, List, Literal, NotRequired, Type, TypedDict
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+# TODO: Separate schemas in schemas dir with separate files.
+class Code(BaseModel):
+    custom_id: str | int
+    proof: str | None = Field(None)
+    code: str | None = Field(
+        None
+    )  # To be backward compatibility with autoformalizer client
+
+    def get_proof_content(self) -> str | None:
+        return self.proof if self.proof is not None else self.code
+
+
+class VerifyRequestBody(BaseModel):
+    codes: list[Code]
+    timeout: int = 300
+    infotree_type: str | None = None
+    disable_cache: bool = False
+
+
 class Snippet(BaseModel):
     custom_id: str = Field(
         ..., description="Identifier to trace the snippet"

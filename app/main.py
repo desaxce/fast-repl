@@ -9,6 +9,7 @@ from rich.logging import RichHandler
 
 from app.manager import Manager
 from app.prisma_client import prisma
+from app.routers.backward import router as backward_router
 from app.routers.check import router as check_router
 from app.routers.health import router as health_router
 from app.settings import Settings
@@ -71,6 +72,10 @@ def create_app(settings: Settings) -> FastAPI:
     app.include_router(
         health_router,
         tags=["health"],
+    )
+    app.include_router(
+        backward_router,
+        tags=["backward"],
     )
     return app
 
