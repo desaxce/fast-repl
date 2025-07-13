@@ -18,10 +18,7 @@ from app.settings import settings
 @pytest.mark.parametrize(
     "client",
     [
-        {
-            "MAX_REPLS": 2,
-            "MAX_USES": 2,
-        },
+        {"MAX_REPLS": 2, "MAX_USES": 2, "INIT_REPLS": {}},
     ],
     indirect=True,
 )
@@ -136,7 +133,7 @@ async def test_repl_mathlib(client: TestClient) -> None:
 @pytest.mark.parametrize(
     "client",
     [
-        {"MAX_REPLS": 1, "MAX_USES": 2},
+        {"MAX_REPLS": 1, "MAX_USES": 2, "INIT_REPLS": {}},
     ],
     indirect=True,
 )
@@ -212,7 +209,7 @@ async def test_repl_timeout(client: TestClient) -> None:
 @pytest.mark.parametrize(
     "client",
     [
-        {"MAX_REPLS": 1, "MAX_USES": 3},
+        {"MAX_REPLS": 1, "MAX_USES": 3, "INIT_REPLS": {}},
     ],
     indirect=True,  # To parametrize fixture
 )

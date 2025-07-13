@@ -38,7 +38,7 @@ async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
 
     # TODO: Create real perf tests not using ASGI transport
     # limits = Limits(max_connections=settings.MAX_REPLS, max_keepalive_connections=5)
-    async with LifespanManager(app):
+    async with LifespanManager(app, startup_timeout=60):
         async with AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://testserver/api",

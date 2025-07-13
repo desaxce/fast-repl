@@ -120,28 +120,40 @@ class Repl:
         logger.info(f"\\[{self.uuid.hex[:8]}] Started")
 
     async def get_current_cpu_usage(self) -> float:
-        if not self.is_running or not self._ps_proc:
-            raise ReplError(
-                "REPL process not started or psutil process not initialized"
+        try:
+            if not self.is_running or not self._ps_proc:
+                raise ReplError(
+                    "REPL process not started or psutil process not initialized"
+                )
+
+            usage = self._ps_proc.cpu_percent(None)
+            for child in self._ps_proc.children(recursive=True):
+                usage += child.cpu_percent(None)
+
+            return float(usage)
+        except psutil.ZombieProcess:
+            logger.warning(
+                f"\\[{self.uuid.hex[:8]}] Zombie process detected, returning 0% CPU usage"
             )
-
-        usage = self._ps_proc.cpu_percent(None)
-        for child in self._ps_proc.children(recursive=True):
-            usage += child.cpu_percent(None)
-
-        return float(usage)
+            return 0.0
 
     async def get_current_memory_usage(self) -> int:
-        if not self.is_running or not self._ps_proc:
-            raise ReplError(
-                "REPL process not started or psutil process not initialized"
+        try:
+            if not self.is_running or not self._ps_proc:
+                raise ReplError(
+                    "REPL process not started or psutil process not initialized"
+                )
+
+            total = self._ps_proc.memory_info().rss
+            for child in self._ps_proc.children(recursive=True):
+                total += child.memory_info().rss
+
+            return int(total)
+        except psutil.ZombieProcess:
+            logger.warning(
+                f"\\[{self.uuid.hex[:8]}] Zombie process detected, returning 0 bytes memory usage"
             )
-
-        total = self._ps_proc.memory_info().rss
-        for child in self._ps_proc.children(recursive=True):
-            total += child.memory_info().rss
-
-        return int(total)
+            return 0
 
     async def _cpu_monitor(self) -> None:
         while self.is_running and self._ps_proc:
