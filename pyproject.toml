@@ -46,19 +46,12 @@ markers = [
 [tool.mypy]
 plugins = ['pydantic.mypy']
 strict = true
-files = ["app", "tests"]
+files = ["prisma", "app", "tests"]
 ignore_missing_imports = true
 allow_untyped_decorators=true
 disable_error_code = [
     "unused-ignore", 
 ]
-
-# [[tool.mypy.overrides]]
-# module = ["prisma.*"]
-# ignore_missing_imports = true
-# disallow_untyped_defs    = true
-# check_untyped_defs       = true
-# warn_unused_ignores      = true
 
 # Build package so tests can import app
 [build-system]
