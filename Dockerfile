@@ -52,7 +52,6 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH=/root/.local/bin:$PATH
 
 COPY app app 
-COPY .python-version .python-version
 COPY pyproject.toml pyproject.toml
 COPY uv.lock uv.lock
 

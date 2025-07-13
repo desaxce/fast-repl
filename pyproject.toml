@@ -16,6 +16,7 @@ dependencies = [
     "uvicorn>=0.34.3",
     "mypy>=1.16.1",
     "pytest-xdist>=3.8.0",
+    "prisma>=0.15.0",
 ]
 
 [tool.uv]
@@ -51,6 +52,13 @@ allow_untyped_decorators=true
 disable_error_code = [
     "unused-ignore", 
 ]
+
+# [[tool.mypy.overrides]]
+# module = ["prisma.*"]
+# ignore_missing_imports = true
+# disallow_untyped_defs    = true
+# check_untyped_defs       = true
+# warn_unused_ignores      = true
 
 # Build package so tests can import app
 [build-system]
