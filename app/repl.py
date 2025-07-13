@@ -52,7 +52,6 @@ class Repl:
         max_mem: int,
         max_uses: int,
     ) -> None:
-        # TODO: Change error file to PIPE
         self.uuid = uuid
         self.header = header
         self.use_count = 0
@@ -62,7 +61,7 @@ class Repl:
         self.header_cmd_response: CheckResponse | None = None
 
         self.proc: Process | None = None
-        self.error_file = tempfile.TemporaryFile("w+")
+        self.error_file = tempfile.TemporaryFile("w+", buffering=0)
         self.max_memory_bytes = max_mem * 1024 * 1024
         self.max_uses = max_uses
 
@@ -127,7 +126,6 @@ class Repl:
             # No CPU limit on REPL, most Lean proofs take up to one core.
             # The adjustment variable is the maximum number of REPLs / timeout.
             # See https://github.com/leanprover-community/repl/issues/91
-            # TODO: Run CPU usage stats on Goedel.
 
             os.setsid()
 
@@ -139,7 +137,7 @@ class Repl:
             env=os.environ,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
-            stderr=self.error_file,
+            stderr=asyncio.subprocess.PIPE,
             preexec_fn=_preexec,
         )
 
