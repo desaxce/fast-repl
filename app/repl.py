@@ -140,6 +140,10 @@ class Repl:
         )
 
         self._ps_proc = psutil.Process(self.proc.pid)
+        now = self._loop.time()
+        self._last_check = now
+        self._last_cpu_time = self._sum_cpu_times(self._ps_proc)
+
         self._cpu_max = 0.0
         self._mem_max = 0
         self._cpu_task = self._loop.create_task(self._cpu_monitor())
@@ -147,50 +151,26 @@ class Repl:
 
         logger.info(f"\\[{self.uuid.hex[:8]}] Started")
 
-    async def get_current_cpu_usage(self) -> float:
-        try:
-            if not self.is_running or not self._ps_proc:
-                raise ReplError(
-                    "REPL process not started or psutil process not initialized"
-                )
-
-            usage = self._ps_proc.cpu_percent(None)
-            for child in self._ps_proc.children(recursive=True):
-                usage += child.cpu_percent(None)
-
-            return float(usage)
-        except psutil.ZombieProcess:
-            logger.warning(
-                f"\\[{self.uuid.hex[:8]}] Zombie process detected, returning 0% CPU usage"
-            )
-            return 0.0
-
-    async def get_current_memory_usage(self) -> int:
-        try:
-            if not self.is_running or not self._ps_proc:
-                raise ReplError(
-                    "REPL process not started or psutil process not initialized"
-                )
-
-            total = self._ps_proc.memory_info().rss
-            for child in self._ps_proc.children(recursive=True):
-                total += child.memory_info().rss
-
-            return int(total)
-        except psutil.ZombieProcess:
-            logger.warning(
-                f"\\[{self.uuid.hex[:8]}] Zombie process detected, returning 0 bytes memory usage"
-            )
-            return 0
+    @staticmethod
+    def _sum_cpu_times(proc: psutil.Process) -> float:
+        total = proc.cpu_times().user + proc.cpu_times().system
+        for c in proc.children(recursive=True):
+            t = c.cpu_times()
+            total += t.user + t.system
+        return float(total)
 
     async def _cpu_monitor(self) -> None:
-        while self.is_running and self._ps_proc:
+        while self.is_running and self._ps_proc and self._loop:
             await asyncio.sleep(1)
-            usage = self._ps_proc.cpu_percent(None)
-            for child in self._ps_proc.children(recursive=True):
-                usage += child.cpu_percent(None)
+            now = self._loop.time()
 
-            self._cpu_max = max(self._cpu_max, usage)
+            cur_cpu = self._sum_cpu_times(self._ps_proc)
+            delta_cpu = cur_cpu - self._last_cpu_time
+            delta_t = now - self._last_check
+            usage_pct = (delta_cpu / delta_t) * 100
+            self._cpu_max = max(self._cpu_max, usage_pct)
+            self._last_cpu_time = cur_cpu
+            self._last_check = now
 
     async def _mem_monitor(self) -> None:
         while self.is_running and self._ps_proc:
@@ -218,10 +198,13 @@ class Repl:
             cmd_response, elapsed_time, diagnostics = await asyncio.wait_for(
                 self.send(snippet, is_header=is_header), timeout=timeout
             )
-        except TimeoutError:
-            elapsed_time = timeout
-            error = f"Lean REPL command timed out in {timeout} seconds"
-            logger.error(error)
+        except TimeoutError as e:
+            logger.error(
+                "\\[{}] Lean REPL command timed out in {} seconds",
+                self.uuid.hex[:8],
+                timeout,
+            )
+            raise e
         except LeanError as e:
             logger.exception("Lean REPL error: %s", e)
             raise e
@@ -242,8 +225,8 @@ class Repl:
     ) -> tuple[CommandResponse, float, Diagnostics]:
         await log_snippet(self.uuid, snippet.id, snippet.code)
 
-        self._cpu_max = await self.get_current_cpu_usage()
-        self._mem_max = await self.get_current_memory_usage()
+        self._cpu_max = 0.0
+        self._mem_max = 0
 
         if not self.proc or self.proc.returncode is not None:
             logger.error("REPL process not started or shut down")

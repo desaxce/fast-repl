@@ -48,6 +48,26 @@ async def run_checks(
 
         try:
             resp = await repl.send_timeout(Snippet(id=snippet.id, code=body), timeout)
+        except TimeoutError as e:
+            error = f"Lean REPL command timed out in {timeout} seconds"
+            await manager.destroy_repl(repl)
+            if db.connected:
+                await prisma.proof.create(
+                    data={
+                        "id": snippet.id,
+                        "code": body,
+                        "time": timeout,
+                        "error": error,
+                        "repl": {
+                            "connect": {"uuid": repl.uuid.hex},
+                        },
+                    }  # type: ignore
+                )
+            return CheckResponse(
+                id=snippet.id,
+                error=error,
+                time=timeout,
+            )
         except Exception as e:
             logger.exception("Snippet execution failed")
             await manager.destroy_repl(repl)
