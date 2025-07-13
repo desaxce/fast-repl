@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     INIT_REPLS: dict[str, int] = Field(
         default_factory=lambda: {"import Mathlib\nimport Aesop": 1}
     )
+    MAX_WAIT: int = 60
 
     DATABASE_USER: str = "root"
     DATABASE_PASSWORD: str = "root"

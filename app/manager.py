@@ -63,7 +63,7 @@ class Manager:
         self,
         header: str = "",
         snippet_id: str = "",
-        timeout: float = 60,  # TODO: make this configurable
+        timeout: float = settings.MAX_WAIT,
     ) -> Repl:
         """
         Async-safe way to get a `Repl` instance for a given header.
