@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -20,6 +20,8 @@ class Proof(BaseModel):
     uuid: UUID
     id: str
     code: str
-    diagnostics: Optional[dict[str, Any]] = None
-    response: Optional[dict[str, Any]] = None
+    diagnostics: dict[str, Any] | None = None
+    response: dict[str, Any] | None = None
+    time: float = 0.0
+    error: str | None = None
     repl_uuid: UUID

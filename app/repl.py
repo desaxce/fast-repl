@@ -6,13 +6,14 @@ import signal
 import tempfile
 from asyncio.subprocess import Process
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import psutil
 from loguru import logger
 from rich.console import Console
 from rich.syntax import Syntax
 
+from app.db import db
 from app.errors import LeanError, ReplError
 from app.prisma_client import prisma
 from app.schemas import CheckResponse, Command, CommandResponse, Diagnostics, Snippet
@@ -47,8 +48,8 @@ class Repl:
         created_at: datetime,
         header: str = "",
         *,
-        max_mem: int = settings.MAX_MEM,
-        max_uses: int = settings.MAX_USES,
+        max_mem: int,
+        max_uses: int,
     ) -> None:
         # TODO: Change error file to PIPE
         self.uuid = uuid
@@ -76,27 +77,34 @@ class Repl:
         self._mem_task: asyncio.Task[None] | None = None
 
     @classmethod
-    async def create(cls, header: str = "") -> "Repl":
-        record = await prisma.repl.create(
-            data={
-                "header": header,
-                "max_uses": settings.MAX_USES,
-                "max_mem": settings.MAX_MEM,
-            }
-        )
+    async def create(cls, header: str, max_uses: int, max_mem: int) -> "Repl":
+        if db.connected:
+            record = await prisma.repl.create(
+                data={
+                    "header": header,
+                    "max_uses": max_uses,
+                    "max_mem": max_mem,
+                }
+            )
+            return cls(
+                uuid=UUID(record.uuid),
+                created_at=record.created_at,
+                header=record.header,
+                max_uses=record.max_uses,
+                max_mem=record.max_mem,
+            )
         return cls(
-            uuid=UUID(record.uuid),
-            created_at=record.created_at,
-            header=record.header,
-            max_uses=record.max_uses,
-            max_mem=record.max_mem,
+            uuid=uuid4(),
+            created_at=datetime.now(),
+            header=header,
+            max_uses=max_uses,
+            max_mem=max_mem,
         )
 
     @property
     def exhausted(self) -> bool:
         if self.header and not is_blank(self.header):  # TODO: fix this header part
             return self.use_count >= self.max_uses + 1
-
         return self.use_count >= self.max_uses
 
     async def start(self) -> None:
@@ -199,7 +207,7 @@ class Repl:
         return self.proc.returncode is None
 
     async def send_timeout(
-        self, snippet: Snippet, timeout: float, debug: bool, is_header: bool = False
+        self, snippet: Snippet, timeout: float, is_header: bool = False
     ) -> CheckResponse:
         error = None
         cmd_response = None
@@ -208,7 +216,7 @@ class Repl:
 
         try:
             cmd_response, elapsed_time, diagnostics = await asyncio.wait_for(
-                self.send(snippet, debug=debug, is_header=is_header), timeout=timeout
+                self.send(snippet, is_header=is_header), timeout=timeout
             )
         except TimeoutError:
             elapsed_time = timeout
@@ -230,7 +238,7 @@ class Repl:
         )
 
     async def send(
-        self, snippet: Snippet, debug: bool, is_header: bool = False
+        self, snippet: Snippet, is_header: bool = False
     ) -> tuple[CommandResponse, float, Diagnostics]:
         await log_snippet(self.uuid, snippet.id, snippet.code)
 
@@ -251,7 +259,7 @@ class Repl:
         input: Command = {"cmd": snippet.code}
 
         if self.use_count != 0 and not is_header:  # remove is_header
-            input["env"] = 0
+            input["env"] = 0  # Always run on first environment
 
         payload = (
             json.dumps(input, ensure_ascii=False) + "\n\n"  # TODO: add the gc feature
@@ -300,7 +308,7 @@ class Repl:
         self.mem_per_exec[self.use_count] = self._mem_max
 
         self.use_count += 1
-        return resp, elapsed_time, (diagnostics if debug else {})
+        return resp, elapsed_time, diagnostics
 
     async def _read_response(self) -> bytes:
         if not self.proc or self.proc.stdout is None:

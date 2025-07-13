@@ -7,7 +7,7 @@ from app.repl import Repl
 
 @pytest.fixture
 async def repl() -> AsyncGenerator[Repl, None]:
-    repl_instance = Repl()
+    repl_instance = await Repl.create("", 1, 1)
     yield repl_instance
     await repl_instance.close()
 

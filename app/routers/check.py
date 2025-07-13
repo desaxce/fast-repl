@@ -5,8 +5,10 @@ from typing import cast
 from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 
+from app.db import db
 from app.errors import NoAvailableReplError
 from app.manager import Manager
+from app.prisma_client import prisma
 from app.schemas import CheckRequest, CheckResponse, ChecksRequest, Snippet
 from app.split import split_snippet
 
@@ -19,7 +21,10 @@ def get_manager(request: Request) -> Manager:
 
 
 async def run_checks(
-    snippets: list[Snippet], timeout: float, debug: bool, manager: Manager
+    snippets: list[Snippet],
+    timeout: float,
+    debug: bool,
+    manager: Manager,
 ) -> list[CheckResponse]:
     async def run_one(snippet: Snippet) -> CheckResponse:
         header, body = split_snippet(snippet.code)
@@ -42,9 +47,7 @@ async def run_checks(
             raise HTTPException(500, str(e)) from e
 
         try:
-            resp = await repl.send_timeout(
-                Snippet(id=snippet.id, code=body), timeout, debug
-            )
+            resp = await repl.send_timeout(Snippet(id=snippet.id, code=body), timeout)
         except Exception as e:
             logger.exception("Snippet execution failed")
             await manager.destroy_repl(repl)
@@ -57,6 +60,26 @@ async def run_checks(
                 json.dumps(resp.model_dump(exclude_none=True), indent=2),
             )
             await manager.release_repl(repl)
+            if db.connected:
+                await prisma.proof.create(
+                    data={
+                        "id": snippet.id,
+                        "code": body,
+                        "diagnostics": json.dumps(
+                            resp.diagnostics if resp.diagnostics else None
+                        ),
+                        "response": json.dumps(
+                            resp.response if resp.response else None
+                        ),
+                        "time": resp.time,
+                        "error": resp.error,
+                        "repl": {
+                            "connect": {"uuid": repl.uuid.hex},
+                        },
+                    }  # type: ignore
+                )
+            if not debug:
+                resp.diagnostics = None
             return resp
 
     return await asyncio.gather(*(run_one(s) for s in snippets))
@@ -74,10 +97,14 @@ async def run_checks(
     include_in_schema=False,  # To not clutter OpenAPI spec.
 )
 async def check_batch(
-    request: ChecksRequest, manager: Manager = Depends(get_manager)
+    request: ChecksRequest,
+    manager: Manager = Depends(get_manager),
 ) -> list[CheckResponse]:
     return await run_checks(
-        request.snippets, float(request.timeout), request.debug, manager
+        request.snippets,
+        float(request.timeout),
+        request.debug,
+        manager,
     )
 
 
@@ -93,9 +120,13 @@ async def check_batch(
     include_in_schema=False,  # To not clutter OpenAPI spec.
 )
 async def check_single(
-    request: CheckRequest, manager: Manager = Depends(get_manager)
+    request: CheckRequest,
+    manager: Manager = Depends(get_manager),
 ) -> CheckResponse:
     resp_list = await run_checks(
-        [request.snippet], float(request.timeout), request.debug, manager
+        [request.snippet],
+        float(request.timeout),
+        request.debug,
+        manager,
     )
     return resp_list[0]

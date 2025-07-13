@@ -18,11 +18,13 @@ model Repl {
 }
 
 model Proof {
-    uuid        String @id @default(uuid()) @db.Uuid
+    uuid        String  @id @default(uuid()) @db.Uuid
     id          String
     code        String
-    diagnostics Json?
-    response    Json?
-    repl_uuid   String @db.Uuid
-    repl        Repl   @relation(fields: [repl_uuid], references: [uuid])
+    diagnostics Json?   @db.JsonB
+    response    Json?   @db.JsonB
+    time        Float
+    error       String?
+    repl_uuid   String  @db.Uuid
+    repl        Repl    @relation(fields: [repl_uuid], references: [uuid])
 }

@@ -140,7 +140,7 @@ class Manager:
             self._cond.notify(1)
 
     async def start_new(self, header: str) -> Repl:
-        repl = await Repl.create(header)
+        repl = await Repl.create(header, max_uses=self.max_uses, max_mem=self.max_mem)
         self._busy.add(repl)
         return repl
 
@@ -178,13 +178,15 @@ class Manager:
                 cmd_response = await repl.send_timeout(
                     Snippet(id=f"{snippet_id}-header", code=repl.header),
                     timeout=timeout,
-                    debug=debug,
                     is_header=True,
                 )
             except Exception as e:
                 logger.exception("Failed to run header on REPL: %s", e)
                 await self.destroy_repl(repl)
                 raise ReplError("Failed to run header on REPL") from e
+
+            if not debug:
+                cmd_response.diagnostics = None
 
             if cmd_response.error:
                 logger.error(f"Header command failed: {cmd_response.error}")

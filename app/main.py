@@ -9,8 +9,8 @@ from pydantic.json_schema import GenerateJsonSchema
 from rich.console import Console
 from rich.logging import RichHandler
 
+from app.db import db
 from app.manager import Manager
-from app.prisma_client import prisma
 from app.routers.backward import router as backward_router
 from app.routers.check import router as check_router
 from app.routers.health import router as health_router
@@ -39,8 +39,8 @@ def create_app(settings: Settings) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         if settings.DATABASE_URL:
             try:
-                await prisma.connect()
-                logger.info("Connected to database")
+                await db.connect()
+                logger.info("DB connected: %s", db.connected)
             except Exception as e:
                 logger.exception("Failed to connect to database: %s", e)
 
@@ -56,11 +56,7 @@ def create_app(settings: Settings) -> FastAPI:
         yield
 
         await app.state.manager.cleanup()
-        if settings.DATABASE_URL:
-            try:
-                await prisma.disconnect()
-            except Exception as e:
-                logger.exception("Failed to disconnect from database: %s", e)
+        await db.disconnect()
 
         logger.info("Disconnected from database")
 
