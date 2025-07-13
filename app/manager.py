@@ -170,7 +170,6 @@ class Manager:
             await repl.start()
         except Exception as e:
             logger.exception("Failed to start REPL: %s", e)
-            await self.destroy_repl(repl)
             raise ReplError("Failed to start REPL") from e
 
         if not is_blank(repl.header):
@@ -180,9 +179,11 @@ class Manager:
                     timeout=timeout,
                     is_header=True,
                 )
+            except TimeoutError as e:
+                logger.error("Header command timed out")
+                raise e
             except Exception as e:
-                logger.exception("Failed to run header on REPL: %s", e)
-                await self.destroy_repl(repl)
+                logger.error("Failed to run header on REPL")
                 raise ReplError("Failed to run header on REPL") from e
 
             if not debug:

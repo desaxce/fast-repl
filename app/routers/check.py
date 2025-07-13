@@ -41,8 +41,32 @@ async def run_checks(
             prep = await manager.prep(repl, snippet.id, timeout, debug)
             if prep and prep.error:
                 return prep
+        except TimeoutError as e:
+            error = f"Lean REPL header command timed out in {timeout} seconds"
+            uuid_hex = repl.uuid.hex
+            await manager.destroy_repl(repl)
+            if db.connected:
+                await prisma.proof.create(
+                    data={
+                        "id": snippet.id,
+                        "code": header,
+                        "time": timeout,
+                        "error": error,
+                        "repl": {
+                            "connect": {"uuid": uuid_hex},
+                        },
+                    }  # type: ignore
+                )
+            return CheckResponse(
+                id=snippet.id,
+                error=error,
+                time=timeout,
+                diagnostics={
+                    "repl_uuid": uuid_hex,
+                },
+            )
         except Exception as e:
-            logger.exception("REPL prep failed")
+            logger.error("REPL prep failed")
             await manager.destroy_repl(repl)
             raise HTTPException(500, str(e)) from e
 
@@ -50,6 +74,7 @@ async def run_checks(
             resp = await repl.send_timeout(Snippet(id=snippet.id, code=body), timeout)
         except TimeoutError as e:
             error = f"Lean REPL command timed out in {timeout} seconds"
+            uuid_hex = repl.uuid.hex
             await manager.destroy_repl(repl)
             if db.connected:
                 await prisma.proof.create(
@@ -59,7 +84,7 @@ async def run_checks(
                         "time": timeout,
                         "error": error,
                         "repl": {
-                            "connect": {"uuid": repl.uuid.hex},
+                            "connect": {"uuid": uuid_hex},
                         },
                     }  # type: ignore
                 )
@@ -67,6 +92,9 @@ async def run_checks(
                 id=snippet.id,
                 error=error,
                 time=timeout,
+                diagnostics={
+                    "repl_uuid": uuid_hex,
+                },
             )
         except Exception as e:
             logger.exception("Snippet execution failed")
