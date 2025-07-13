@@ -57,6 +57,9 @@ class Repl:
         self.use_count = 0
         self.created_at = created_at
 
+        # Stores the response received when running the import header.
+        self.header_cmd_response: CheckResponse | None = None
+
         self.proc: Process | None = None
         self.error_file = tempfile.TemporaryFile("w+")
         self.max_memory_bytes = max_mem * 1024 * 1024

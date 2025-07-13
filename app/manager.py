@@ -193,5 +193,7 @@ class Manager:
                 logger.error(f"Header command failed: {cmd_response.error}")
                 await self.destroy_repl(repl)
 
+            repl.header_cmd_response = cmd_response
+
             return cmd_response
-        return None  # TODO: store first header command response
+        return repl.header_cmd_response
