@@ -48,24 +48,33 @@ class Repl:
         max_uses: int = settings.MAX_USES,
     ) -> None:
         # TODO: Change error file to PIPE
-        self.header = header
+        self.uuid = uuid.uuid4()
         self.created_at: float = time()
+        self.header = header
+        self.use_count = 0
+
         self.proc: Process | None = None
         self.error_file = tempfile.TemporaryFile("w+")
-        self.use_count = 0
         self.max_memory_bytes = max_mem * 1024 * 1024
         self.max_uses = max_uses
-        self.uuid = uuid.uuid4()
+
         self._loop: asyncio.AbstractEventLoop | None = None
+
+        # REPL statistics
+        self.cpu_per_exec: dict[int, float] = {}
+        self.mem_per_exec: dict[int, int] = {}
+
+        # Vars that hold max CPU / mem usage per proof.
         self._cpu_max: float = 0.0
         self._mem_max: int = 0
-        # TODO: Implement cpu at repl level as a list of all cpu max across execs of send()
-        self._cpu_task: asyncio.Task[None] | None = None
+
         self._ps_proc: psutil.Process | None = None
+        self._cpu_task: asyncio.Task[None] | None = None
+        self._mem_task: asyncio.Task[None] | None = None
 
     @property
     def exhausted(self) -> bool:
-        if self.header and not is_blank(self.header):  # Todo: fix this header part
+        if self.header and not is_blank(self.header):  # TODO: fix this header part
             return self.use_count >= self.max_uses + 1
 
         return self.use_count >= self.max_uses
@@ -104,10 +113,35 @@ class Repl:
 
         self._ps_proc = psutil.Process(self.proc.pid)
         self._cpu_max = 0.0
+        self._mem_max = 0
         self._cpu_task = self._loop.create_task(self._cpu_monitor())
         self._mem_task = self._loop.create_task(self._mem_monitor())
 
         logger.info(f"\\[{self.uuid.hex[:8]}] Started")
+
+    async def get_current_cpu_usage(self) -> float:
+        if not self.is_running or not self._ps_proc:
+            raise ReplError(
+                "REPL process not started or psutil process not initialized"
+            )
+
+        usage = self._ps_proc.cpu_percent(None)
+        for child in self._ps_proc.children(recursive=True):
+            usage += child.cpu_percent(None)
+
+        return int(usage)
+
+    async def get_current_memory_usage(self) -> int:
+        if not self.is_running or not self._ps_proc:
+            raise ReplError(
+                "REPL process not started or psutil process not initialized"
+            )
+
+        total = self._ps_proc.memory_info().rss
+        for child in self._ps_proc.children(recursive=True):
+            total += child.memory_info().rss
+
+        return int(total)
 
     async def _cpu_monitor(self) -> None:
         while self.is_running and self._ps_proc:
@@ -168,8 +202,8 @@ class Repl:
     ) -> tuple[CommandResponse, float, Diagnostics]:
         await log_snippet(self.uuid, snippet.custom_id, snippet.code)
 
-        self._cpu_max = 0.0
-        self._mem_max = 0
+        self._cpu_max = await self.get_current_cpu_usage()
+        self._mem_max = await self.get_current_memory_usage()
 
         if not self.proc or self.proc.returncode is not None:
             logger.error("REPL process not started or shut down")
@@ -229,6 +263,9 @@ class Repl:
             "cpu_max": self._cpu_max,
             "memory_max": self._mem_max,
         }
+
+        self.cpu_per_exec[self.use_count] = self._cpu_max
+        self.mem_per_exec[self.use_count] = self._mem_max
 
         self.use_count += 1
         return resp, elapsed_time, (diagnostics if debug else {})
