@@ -326,7 +326,8 @@ class Repl:
             if self._mem_task:
                 self._mem_task.cancel()
 
-            await prisma.repl.update(
-                where={"uuid": str(self.uuid)},
-                data={"status": ReplStatus.STOPPED},  # type: ignore
-            )
+            if db.connected:
+                await prisma.repl.update(
+                    where={"uuid": str(self.uuid)},
+                    data={"status": ReplStatus.STOPPED},  # type: ignore
+                )

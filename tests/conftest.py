@@ -25,13 +25,6 @@ def client(request: FixtureRequest) -> TestClient:
         setattr(s, k, v)
     app = create_app(s)
 
-    async def _cleanup() -> None:
-        await app.state.manager.cleanup()
-
-    request.addfinalizer(
-        lambda: asyncio.get_event_loop().run_until_complete(_cleanup())
-    )
-
     with TestClient(app, base_url="http://testserver/api") as client:
         yield client
 
@@ -47,13 +40,6 @@ def root_client(request: FixtureRequest) -> TestClient:
     for k, v in overrides.items():
         setattr(s, k, v)
     app = create_app(s)
-
-    async def _cleanup() -> None:
-        await app.state.manager.cleanup()
-
-    request.addfinalizer(
-        lambda: asyncio.get_event_loop().run_until_complete(_cleanup())
-    )
 
     with TestClient(app, base_url="http://testserver") as root_client:
         yield root_client
