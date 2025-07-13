@@ -51,7 +51,8 @@ WORKDIR /root/fast-repl
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH=/root/.local/bin:$PATH
 
-COPY app app 
+COPY app app
+COPY prisma prisma
 COPY pyproject.toml pyproject.toml
 COPY uv.lock uv.lock
 
@@ -61,7 +62,8 @@ COPY README.md README.md
 RUN uv export --no-dev --no-emit-project > requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir -e .
+RUN prisma generate
 
 EXPOSE 80
 
-CMD ["uvicorn", "--host", "0.0.0.0", "--port", "80", "app.main:app"]
+CMD ["sh", "-c", "prisma migrate deploy && uvicorn --host 0.0.0.0 --port 80 app.main:app"]

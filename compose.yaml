@@ -11,6 +11,7 @@ services:
       - 8000:8000
     environment:
       - API_KEY=${API_KEY}
+      - INIT_REPLS={}
     volumes:
       - ./data:/app/data      # for a small SQLite file -> to remove
     healthcheck:

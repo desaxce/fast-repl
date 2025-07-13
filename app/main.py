@@ -34,7 +34,8 @@ setattr(GenerateJsonSchema, "sort", no_sort)
 def create_app(settings: Settings) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-        await prisma.connect()
+        if settings.DATABASE_URL:
+            await prisma.connect()
         logger.info("Connected to database")
         manager = Manager(
             max_repls=settings.MAX_REPLS,
