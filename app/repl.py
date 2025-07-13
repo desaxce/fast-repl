@@ -69,7 +69,7 @@ class Repl:
         self.mem_per_exec: dict[int, int] = {}
 
         # Vars that hold max CPU / mem usage per proof.
-        self._cpu_max: float = 0.0
+        self._cpu_max: float = 0.0  # CPU as a percentage of a single core
         self._mem_max: int = 0
 
         self._ps_proc: psutil.Process | None = None

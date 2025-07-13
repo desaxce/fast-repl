@@ -19,9 +19,8 @@ curl -H "Authorization: Bearer secret123" \
      -d '{"snippets":[{"id":"1","code":"..." }],"timeout":5}' \
      -H "Content-Type: application/json"
 ```
-# TODO: put example with old backward API
 
-Check docs at http://localhost:8000/docs or http://localhost:8000/redoc.
+Check docs at http://localhost:8000/docs or http://localhost:8000/redoc for the backward-compatible API (`/verify` and `/one_pass_batch_verify` endpoints).
 
 And test with:
 ```
