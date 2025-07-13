@@ -1,4 +1,4 @@
-from typing import Any, List, Literal, NotRequired, Type, TypedDict
+from typing import Any, Literal, NotRequired, Type, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -15,6 +15,16 @@ class Code(BaseModel):
         return self.proof if self.proof is not None else self.code
 
 
+class BackwardResponse(TypedDict):
+    custom_id: str
+    error: str | None
+    response: NotRequired[dict[str, Any] | None]
+
+
+class VerifyResponse(BaseModel):
+    results: list[BackwardResponse]
+
+
 class VerifyRequestBody(BaseModel):
     codes: list[Code]
     timeout: int = 300
@@ -23,9 +33,7 @@ class VerifyRequestBody(BaseModel):
 
 
 class Snippet(BaseModel):
-    custom_id: str = Field(
-        ..., description="Identifier to trace the snippet"
-    )  # TODO: Rename to id
+    id: str = Field(..., description="Identifier to trace the snippet")
     code: str = Field(..., description="Lean 4 snippet or proof attempt")
 
 
@@ -79,9 +87,9 @@ class Diagnostics(TypedDict, total=False):
 
 class CommandResponse(TypedDict):
     env: int
-    messages: NotRequired[List[Message]]
-    sorries: NotRequired[List[Sorry]]
-    tactics: NotRequired[List[Tactic]]
+    messages: NotRequired[list[Message]]
+    sorries: NotRequired[list[Sorry]]
+    tactics: NotRequired[list[Tactic]]
     infotree: NotRequired[dict[str, Any] | None]
 
 
@@ -94,7 +102,7 @@ U = TypeVar("U", bound="CheckResponse")
 
 # TODO: Check what REPL-level parallelism means - also check repl-level timeout
 class CheckResponse(BaseModel):
-    custom_id: str = Field(..., description="Identifier to trace the snippet")
+    id: str = Field(..., description="Identifier to trace the snippet")
     time: float = 0.0
     error: str | None = None
     response: CommandResponse | None = None
@@ -108,11 +116,6 @@ class CheckResponse(BaseModel):
         if not (values.get("error") or values.get("response")):
             raise ValueError("either `error` or `response` must be set")
         return values
-
-
-# Useful class for compatibility with the old API
-class CompatibleCheckResponse(BaseModel):
-    results: List[CheckResponse]
 
 
 class BaseRequest(BaseModel):
@@ -132,7 +135,7 @@ class BaseRequest(BaseModel):
 
 
 class ChecksRequest(BaseRequest):
-    snippets: List[Snippet] = Field(
+    snippets: list[Snippet] = Field(
         description="List of snippets to validate (batch or single element)"
     )
 
@@ -143,7 +146,7 @@ class ChecksRequest(BaseRequest):
         if not arr or len(arr) == 0:
             raise ValueError("`snippets` must be provided and non empty")
 
-        ids = set({s["custom_id"] for s in arr})
+        ids = set({s["id"] for s in arr})
         if len(ids) != len(arr):
             raise ValueError("`snippets` must have unique ids")
         return values
@@ -153,7 +156,7 @@ class ChecksRequest(BaseRequest):
             "example": {
                 "snippets": [
                     {
-                        "custom_id": "mathlib-import-def",
+                        "id": "mathlib-import-def",
                         "code": "import Mathlib\ndef f := 1",
                     },
                 ],
@@ -173,7 +176,7 @@ class CheckRequest(BaseRequest):
         json_schema_extra={
             "example": {
                 "snippet": {
-                    "custom_id": "mathlib-import-def",
+                    "id": "mathlib-import-def",
                     "code": "import Mathlib\ndef f := 1",
                 },
                 "timeout": 20,

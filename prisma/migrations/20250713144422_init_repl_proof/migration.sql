@@ -11,14 +11,14 @@ CREATE TABLE "Repl" (
 
 -- CreateTable
 CREATE TABLE "Proof" (
-    "id" SERIAL NOT NULL,
-    "custom_id" TEXT NOT NULL,
+    "uuid" UUID NOT NULL,
+    "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "diagnostics" JSONB,
     "response" JSONB,
     "repl_uuid" UUID NOT NULL,
 
-    CONSTRAINT "Proof_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Proof_pkey" PRIMARY KEY ("uuid")
 );
 
 -- AddForeignKey

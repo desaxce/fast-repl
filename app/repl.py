@@ -202,7 +202,7 @@ class Repl:
             raise e
 
         return CheckResponse(
-            custom_id=snippet.custom_id,
+            id=snippet.id,
             error=error,
             response=cmd_response,
             time=elapsed_time,
@@ -212,7 +212,7 @@ class Repl:
     async def send(
         self, snippet: Snippet, debug: bool, is_header: bool = False
     ) -> tuple[CommandResponse, float, Diagnostics]:
-        await log_snippet(self.uuid, snippet.custom_id, snippet.code)
+        await log_snippet(self.uuid, snippet.id, snippet.code)
 
         self._cpu_max = await self.get_current_cpu_usage()
         self._mem_max = await self.get_current_memory_usage()

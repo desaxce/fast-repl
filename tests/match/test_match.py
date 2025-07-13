@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette import status
 
-from app.schemas import ChecksRequest
+from app.schemas import ChecksRequest, VerifyRequestBody
 
 INPUT_DIR = os.path.join("tests", "match", "input")
 OUTPUT_DIR = os.path.join("tests", "match", "output")
@@ -51,7 +51,7 @@ TEST_CASES = _collect_test_cases()
 
 @pytest.mark.match
 @pytest.mark.parametrize("input_file, expected_file", TEST_CASES)
-def test_match(client: TestClient, input_file: str, expected_file: str) -> None:
+def test_match(root_client: TestClient, input_file: str, expected_file: str) -> None:
     with open(input_file, "r") as f:
         proof_code = f.read()
 
@@ -70,11 +70,12 @@ def test_match(client: TestClient, input_file: str, expected_file: str) -> None:
         problem_id = problem_id[7:]
 
     # Todo: Pass in infotree arg + create lean client
-    payload = ChecksRequest(
-        snippets=[{"custom_id": problem_id, "code": proof_code}], timeout=60, debug=True
+    payload = VerifyRequestBody(
+        codes=[{"custom_id": problem_id, "code": proof_code}],
+        timeout=60,
     ).model_dump()
 
-    response = client.post("/checks", json=payload)  # TODO: use backward API
+    response = root_client.post("/verify", json=payload)
     assert response.status_code == status.HTTP_200_OK
     response = response.json()
 

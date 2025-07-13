@@ -17,8 +17,8 @@ class Repl(BaseModel):
 
 
 class Proof(BaseModel):
-    id: int
-    custom_id: str
+    uuid: UUID
+    id: str
     code: str
     diagnostics: Optional[dict[str, Any]] = None
     response: Optional[dict[str, Any]] = None

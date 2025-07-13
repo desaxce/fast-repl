@@ -1,3 +1,4 @@
+import asyncio
 import difflib
 import importlib
 import json
@@ -14,7 +15,7 @@ from app.settings import Settings
 
 @pytest.fixture(
     params=[
-        {"MAX_REPLS": 5, "MAX_USES": 10, "INIT_REPLS": {}},
+        {"MAX_REPLS": 5, "MAX_USES": 10, "INIT_REPLS": {}, "DATABASE_URL": None},
     ]
 )
 def client(request: FixtureRequest) -> TestClient:
@@ -23,8 +24,39 @@ def client(request: FixtureRequest) -> TestClient:
     for k, v in overrides.items():
         setattr(s, k, v)
     app = create_app(s)
-    with TestClient(app, base_url="http://testserver/api") as c:
-        yield c
+
+    async def _cleanup() -> None:
+        await app.state.manager.cleanup()
+
+    request.addfinalizer(
+        lambda: asyncio.get_event_loop().run_until_complete(_cleanup())
+    )
+
+    with TestClient(app, base_url="http://testserver/api") as client:
+        yield client
+
+
+@pytest.fixture(
+    params=[
+        {"MAX_REPLS": 5, "MAX_USES": 10, "INIT_REPLS": {}, "DATABASE_URL": None},
+    ]
+)
+def root_client(request: FixtureRequest) -> TestClient:
+    overrides = getattr(request, "param", {})
+    s = Settings(_env_file=None)
+    for k, v in overrides.items():
+        setattr(s, k, v)
+    app = create_app(s)
+
+    async def _cleanup() -> None:
+        await app.state.manager.cleanup()
+
+    request.addfinalizer(
+        lambda: asyncio.get_event_loop().run_until_complete(_cleanup())
+    )
+
+    with TestClient(app, base_url="http://testserver") as root_client:
+        yield root_client
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

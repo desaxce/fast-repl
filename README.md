@@ -16,9 +16,10 @@ export API_KEY="secret123"
 docker-compose up -d
 curl -H "Authorization: Bearer secret123" \
      -X POST http://localhost:8000/api/check \
-     -d '{"snippets":[{"custom_id":"1","code":"..." }],"timeout":5}' \
+     -d '{"snippets":[{"id":"1","code":"..." }],"timeout":5}' \
      -H "Content-Type: application/json"
 ```
+# TODO: put example with old backward API
 
 Check docs at http://localhost:8000/docs or http://localhost:8000/redoc.
 
@@ -26,7 +27,7 @@ And test with:
 ```
 curl -X POST http://localhost:8000/api/check \ 
   -H "Content-Type: application/json" \
-  -d '{"snippets": [{"custom_id": "truc", "code":"#check 1 + 1"}]}' | jq
+  -d '{"snippets": [{"id": "truc", "code":"#check 1 + 1"}]}' | jq
 ```
 
 Environment variables to configure the REPL manager:
@@ -69,7 +70,7 @@ process can access. Should the Lean 4 code to evaluate contain options such as
 consume what is available until it reaches an OOM or slows down your whole machine for CPU. 
 The CPU appears to be less of a concern because most REPL processes consume a maximum of
 one core at a time: this is due to Lean 4 tactics usually being non-threaded. 
-TODO: Check CPU consumption per proof on Goedel.
+TODO: Check CPU + MEM consumption per proof on Goedel.
 
 On Linux, we can limit the memory resource with the variable MAX_MEM.
 

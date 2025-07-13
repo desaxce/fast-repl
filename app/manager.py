@@ -177,7 +177,7 @@ class Manager:
         if not is_blank(repl.header):
             try:
                 cmd_response = await repl.send_timeout(
-                    Snippet(custom_id=f"{snippet_id}-header", code=repl.header),
+                    Snippet(id=f"{snippet_id}-header", code=repl.header),
                     timeout=timeout,
                     debug=debug,
                     is_header=True,

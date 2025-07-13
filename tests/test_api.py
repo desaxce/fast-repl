@@ -18,14 +18,14 @@ from app.settings import settings
 @pytest.mark.parametrize(
     "client",
     [
-        {"MAX_REPLS": 2, "MAX_USES": 2, "INIT_REPLS": {}},
+        {"MAX_REPLS": 2, "MAX_USES": 2, "INIT_REPLS": {}, "DATABASE_URL": None},
     ],
     indirect=True,
 )
 async def test_repl_check_nat(client: TestClient) -> None:
     uuid = str(uuid4())
     payload = CheckRequest(
-        snippet={"custom_id": uuid, "code": "#check Nat"},
+        snippet={"id": uuid, "code": "#check Nat"},
     ).model_dump()
     resp = client.post("check", json=payload)
 
@@ -44,7 +44,7 @@ async def test_repl_check_nat(client: TestClient) -> None:
     }
 
     expected = CheckResponse(
-        custom_id=uuid,
+        id=uuid,
         response=repl_response,
         time=1.0,
     ).model_dump(exclude_none=True)
@@ -53,10 +53,17 @@ async def test_repl_check_nat(client: TestClient) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "client",
+    [
+        {"INIT_REPLS": {}, "DATABASE_URL": None},
+    ],
+    indirect=True,
+)
 async def test_single_snippet(client: TestClient) -> None:
     uuid = str(uuid4())
     payload = CheckRequest(
-        snippet={"custom_id": uuid, "code": "#check Nat"},
+        snippet={"id": uuid, "code": "#check Nat"},
     ).model_dump()
     resp = client.post("check", json=payload)
     assert resp.status_code == status.HTTP_200_OK
@@ -73,7 +80,7 @@ async def test_single_snippet(client: TestClient) -> None:
         "env": 0,
     }
     expected = CheckResponse(
-        custom_id=uuid,
+        id=uuid,
         response=repl_response,
         time=1.0,
     ).model_dump(exclude_none=True)
@@ -89,6 +96,7 @@ async def test_single_snippet(client: TestClient) -> None:
             "MAX_REPLS": 1,
             "MAX_USES": 3,
             "INIT_REPLS": {},  # Ensure nothing preloaded
+            "DATABASE_URL": None,
         },  # bumped max_uses to 3 because now header makes age increment
     ],
     indirect=True,
@@ -96,14 +104,14 @@ async def test_single_snippet(client: TestClient) -> None:
 async def test_repl_mathlib(client: TestClient) -> None:
     uuid = str(uuid4())
     payload = CheckRequest(
-        snippet={"custom_id": uuid, "code": "import Mathlib\ndef f := 1"},
+        snippet={"id": uuid, "code": "import Mathlib\ndef f := 1"},
         debug=True,  # Enable debug to see diagnostics
     ).model_dump()
     resp = client.post("check", json=payload)
     assert resp.status_code == status.HTTP_200_OK
 
     expected = {
-        "custom_id": uuid,
+        "id": uuid,
         "response": {
             "env": 1
         },  # Env is 1 because initialization with header bumps env value
@@ -114,13 +122,13 @@ async def test_repl_mathlib(client: TestClient) -> None:
 
     uuid = str(uuid4())
     payload = CheckRequest(
-        snippet={"custom_id": uuid, "code": "import Mathlib\ndef f := 2"},
+        snippet={"id": uuid, "code": "import Mathlib\ndef f := 2"},
         debug=True,
     ).model_dump()
     resp1 = client.post("check", json=payload)
     assert resp1.status_code == status.HTTP_200_OK
     expected = {
-        "custom_id": uuid,
+        "id": uuid,
         "response": {"env": 2},
     }  # Env is 2 because max one repl and manager shared by all tests.
 
@@ -133,7 +141,7 @@ async def test_repl_mathlib(client: TestClient) -> None:
 @pytest.mark.parametrize(
     "client",
     [
-        {"MAX_REPLS": 1, "MAX_USES": 2, "INIT_REPLS": {}},
+        {"MAX_REPLS": 1, "MAX_USES": 2, "INIT_REPLS": {}, "DATABASE_URL": None},
     ],
     indirect=True,
 )
@@ -141,7 +149,7 @@ async def test_repl_timeout(client: TestClient) -> None:
     # Maximum of one REPL with two uses so that REPL can be reused.
     uuid = str(uuid4())
     payload = CheckRequest(
-        snippet={"custom_id": uuid, "code": "import Mathlib"},
+        snippet={"id": uuid, "code": "import Mathlib"},
         timeout=1,  # Short timeout to trigger a timeout error
         debug=True,
     ).model_dump()
@@ -164,7 +172,7 @@ async def test_repl_timeout(client: TestClient) -> None:
     uuid = str(uuid4())
     payload = CheckRequest(
         snippet={
-            "custom_id": uuid,
+            "id": uuid,
             "code": "theorem one_plus_one : 1 + 1 = 2 := by rfl",
         },
         timeout=5,
@@ -176,7 +184,7 @@ async def test_repl_timeout(client: TestClient) -> None:
 
     expecteds = {
         "v4.19.0": {
-            "custom_id": uuid,
+            "id": uuid,
             "response": {
                 "messages": [
                     {
@@ -191,7 +199,7 @@ async def test_repl_timeout(client: TestClient) -> None:
             },
         },
         "v4.15.0": {
-            "custom_id": uuid,
+            "id": uuid,
             "response": {
                 "env": 0,
             },
@@ -209,13 +217,13 @@ async def test_repl_timeout(client: TestClient) -> None:
 @pytest.mark.parametrize(
     "client",
     [
-        {"MAX_REPLS": 1, "MAX_USES": 3, "INIT_REPLS": {}},
+        {"MAX_REPLS": 1, "MAX_USES": 3, "INIT_REPLS": {}, "DATABASE_URL": None},
     ],
     indirect=True,  # To parametrize fixture
 )
 async def test_repl_exhausted(client: TestClient) -> None:
     payload = CheckRequest(
-        snippet={"custom_id": "1", "code": "#check Nat"}, debug=True
+        snippet={"id": "1", "code": "#check Nat"}, debug=True
     ).model_dump()
 
     try:
@@ -228,7 +236,7 @@ async def test_repl_exhausted(client: TestClient) -> None:
     repl_uuid = resp.json()["diagnostics"]["repl_uuid"]
 
     payload = CheckRequest(
-        snippet={"custom_id": "2", "code": "#check 0"}, debug=True
+        snippet={"id": "2", "code": "#check 0"}, debug=True
     ).model_dump()
 
     try:
@@ -241,7 +249,7 @@ async def test_repl_exhausted(client: TestClient) -> None:
     assert repl_uuid == resp.json()["diagnostics"]["repl_uuid"]
 
     payload = CheckRequest(
-        snippet={"custom_id": "3", "code": "#check 1"}, debug=True
+        snippet={"id": "3", "code": "#check 1"}, debug=True
     ).model_dump()
 
     try:
@@ -254,7 +262,7 @@ async def test_repl_exhausted(client: TestClient) -> None:
     assert repl_uuid == resp.json()["diagnostics"]["repl_uuid"]
 
     payload = CheckRequest(
-        snippet={"custom_id": "4", "code": "#check 2"}, debug=True
+        snippet={"id": "4", "code": "#check 2"}, debug=True
     ).model_dump()
 
     try:
@@ -268,10 +276,17 @@ async def test_repl_exhausted(client: TestClient) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "client",
+    [
+        {"INIT_REPLS": {}, "DATABASE_URL": None},
+    ],
+    indirect=True,
+)
 async def test_check_trailing_slash(client: TestClient) -> None:
     uuid = str(uuid4())
     payload = CheckRequest(
-        snippet={"custom_id": uuid, "code": "#check Nat"},
+        snippet={"id": uuid, "code": "#check Nat"},
     ).model_dump()
 
     # Call with slash
