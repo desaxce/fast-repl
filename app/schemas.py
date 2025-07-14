@@ -44,6 +44,7 @@ class Snippet(BaseModel):
 class Command(TypedDict):
     cmd: str
     env: NotRequired[int | None]
+    gc: NotRequired[bool]  # Whether to run garbage collection after the command
 
 
 class Pos(TypedDict):
@@ -86,7 +87,7 @@ class Diagnostics(TypedDict, total=False):
 
 
 class CommandResponse(TypedDict):
-    env: int
+    env: NotRequired[int]
     messages: NotRequired[list[Message]]
     sorries: NotRequired[list[Sorry]]
     tactics: NotRequired[list[Tactic]]
@@ -113,7 +114,12 @@ class CheckResponse(BaseModel):
     def require_error_or_response(
         cls: Type[U], values: dict[str, Any]
     ) -> dict[str, Any]:
-        if not (values.get("error") or values.get("response")):
+        # Either we have an error or a response object (possibly empty).
+        if (not values.get("error")) and "response" not in values:
+            # For some problems like `lean_workbook_10075` from https://huggingface.co/datasets/Goedel-LM/Lean-workbook-proofs
+            # the REPL with garbage collection returns an empty response (and no error).
+            # From at least v4.19.0, there is always at least the data "Goals accomplished" in the response.
+            # Prior to the garbage collection, the response was at least containing the "env" key.
             raise ValueError("either `error` or `response` must be set")
         return values
 
