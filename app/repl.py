@@ -193,7 +193,7 @@ class Repl:
         self, snippet: Snippet, timeout: float, is_header: bool = False
     ) -> CheckResponse:
         error = None
-        cmd_response = None
+        cmd_response: CommandResponse = {}
         elapsed_time = 0.0
         diagnostics = Diagnostics(repl_uuid=str(self.uuid))
 
@@ -224,7 +224,9 @@ class Repl:
         )
 
     async def send(
-        self, snippet: Snippet, is_header: bool = False
+        self,
+        snippet: Snippet,
+        is_header: bool = False,
     ) -> tuple[CommandResponse, float, Diagnostics]:
         await log_snippet(self.uuid, snippet.id, snippet.code)
 
@@ -243,8 +245,12 @@ class Repl:
             raise ReplError("stdout pipe not initialized")
 
         input: Command = {"cmd": snippet.code}
+        if not is_header:
+            input["gc"] = True
 
-        if self.use_count != 0 and not is_header:  # remove is_header
+        if (
+            self.use_count != 0 and not is_header
+        ):  # Ideally only need to rely on use_count
             input["env"] = 0  # Always run on first environment
 
         payload = (
@@ -274,6 +280,9 @@ class Repl:
         except json.JSONDecodeError:
             logger.error("JSON decode error: %r", raw)
             raise ReplError("JSON decode error")
+        except Exception as e:
+            logger.error("Error in json.loads with raw: %r", raw)
+            raise e
 
         self.error_file.seek(0)
         err = self.error_file.read().strip()

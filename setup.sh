@@ -24,10 +24,10 @@ popd
 # Install REPL
 echo "Installing REPL..."
 if [ ! -d "repl" ]; then
-    git clone --branch ${LEAN_VERSION} --single-branch --depth 1 https://github.com/leanprover-community/repl.git 
+    git clone --branch lean415compat --single-branch --depth 1 https://github.com/FrederickPu/repl.git 
 fi
 pushd repl
-git checkout ${LEAN_VERSION}
+git checkout lean415compat
 lake build
 popd
 
