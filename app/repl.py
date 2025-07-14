@@ -17,7 +17,14 @@ from app.db import db
 from app.errors import LeanError, ReplError
 from app.models import ReplStatus
 from app.prisma_client import prisma
-from app.schemas import CheckResponse, Command, CommandResponse, Diagnostics, Snippet
+from app.schemas import (
+    CheckResponse,
+    Command,
+    CommandResponse,
+    Diagnostics,
+    Infotree,
+    Snippet,
+)
 from app.settings import settings
 from app.utils import is_blank
 
@@ -190,7 +197,11 @@ class Repl:
         return self.proc.returncode is None
 
     async def send_timeout(
-        self, snippet: Snippet, timeout: float, is_header: bool = False
+        self,
+        snippet: Snippet,
+        timeout: float,
+        is_header: bool = False,
+        infotree: Infotree | None = None,
     ) -> CheckResponse:
         error = None
         cmd_response = None
@@ -199,7 +210,8 @@ class Repl:
 
         try:
             cmd_response, elapsed_time, diagnostics = await asyncio.wait_for(
-                self.send(snippet, is_header=is_header), timeout=timeout
+                self.send(snippet, is_header=is_header, infotree=infotree),
+                timeout=timeout,
             )
         except TimeoutError as e:
             logger.error(
@@ -224,7 +236,10 @@ class Repl:
         )
 
     async def send(
-        self, snippet: Snippet, is_header: bool = False
+        self,
+        snippet: Snippet,
+        is_header: bool = False,
+        infotree: Infotree | None = None,
     ) -> tuple[CommandResponse, float, Diagnostics]:
         await log_snippet(self.uuid, snippet.id, snippet.code)
 
@@ -247,9 +262,10 @@ class Repl:
         if self.use_count != 0 and not is_header:  # remove is_header
             input["env"] = 0  # Always run on first environment
 
-        payload = (
-            json.dumps(input, ensure_ascii=False) + "\n\n"  # TODO: add the gc feature
-        ).encode("utf-8")
+        if infotree:
+            input["infotree"] = infotree
+
+        payload = (json.dumps(input, ensure_ascii=False) + "\n\n").encode("utf-8")
 
         start = loop.time()
         logger.debug("Sending payload to REPL")

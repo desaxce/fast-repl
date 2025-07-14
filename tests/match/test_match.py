@@ -69,7 +69,6 @@ def test_match(root_client: TestClient, input_file: str, expected_file: str) -> 
     if problem_id.startswith("goedel-"):  # TODO: move to goedel dir
         problem_id = problem_id[7:]
 
-    # Todo: Pass in infotree arg + create lean client
     payload = VerifyRequestBody(
         codes=[{"custom_id": problem_id, "code": proof_code}],
         timeout=60,

@@ -9,7 +9,7 @@ from app.db import db
 from app.errors import NoAvailableReplError
 from app.manager import Manager
 from app.prisma_client import prisma
-from app.schemas import CheckRequest, CheckResponse, ChecksRequest, Snippet
+from app.schemas import CheckRequest, CheckResponse, ChecksRequest, Infotree, Snippet
 from app.split import split_snippet
 
 router = APIRouter()
@@ -21,7 +21,12 @@ def get_manager(request: Request) -> Manager:
 
 
 async def run_checks(
-    snippets: list[Snippet], timeout: float, debug: bool, manager: Manager, reuse: bool
+    snippets: list[Snippet],
+    timeout: float,
+    debug: bool,
+    manager: Manager,
+    reuse: bool,
+    infotree: Infotree | None = None,
 ) -> list[CheckResponse]:
     async def run_one(snippet: Snippet) -> CheckResponse:
         header, body = split_snippet(snippet.code)
@@ -68,7 +73,9 @@ async def run_checks(
             raise HTTPException(500, str(e)) from e
 
         try:
-            resp = await repl.send_timeout(Snippet(id=snippet.id, code=body), timeout)
+            resp = await repl.send_timeout(
+                Snippet(id=snippet.id, code=body), timeout, infotree=infotree
+            )
         except TimeoutError as e:
             error = f"Lean REPL command timed out in {timeout} seconds"
             uuid_hex = repl.uuid.hex
@@ -146,7 +153,12 @@ async def check_batch(
     manager: Manager = Depends(get_manager),
 ) -> list[CheckResponse]:
     return await run_checks(
-        request.snippets, float(request.timeout), request.debug, manager, request.reuse
+        request.snippets,
+        float(request.timeout),
+        request.debug,
+        manager,
+        request.reuse,
+        request.infotree,
     )
 
 
@@ -166,6 +178,11 @@ async def check_single(
     manager: Manager = Depends(get_manager),
 ) -> CheckResponse:
     resp_list = await run_checks(
-        [request.snippet], float(request.timeout), request.debug, manager, request.reuse
+        [request.snippet],
+        float(request.timeout),
+        request.debug,
+        manager,
+        request.reuse,
+        request.infotree,
     )
     return resp_list[0]

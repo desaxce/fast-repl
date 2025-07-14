@@ -22,7 +22,7 @@ from app.settings import settings
 
 
 @pytest.mark.perfs
-@pytest.mark.asyncio
+@pytest.mark.asyncio  # TODO: Parametrize
 async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
 
     ds = load_dataset(
@@ -36,7 +36,7 @@ async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
     logger.info(f"Checking {len(ds)} proofs")
     times: list[float] = []
 
-    # TODO: Create real perf tests not using ASGI transport
+    # TODO: Create real perf tests not using ASGI transport (with actual network)
     # limits = Limits(max_connections=settings.MAX_REPLS, max_keepalive_connections=5)
     async with LifespanManager(app, startup_timeout=60):
         async with AsyncClient(
@@ -77,9 +77,7 @@ async def test_goedel(perf_rows: int, perf_shuffle: bool) -> None:
                 ]  # skip this one, it's too long
             ]
 
-            all_results = await asyncio.gather(
-                *tasks
-            )  # TODO: run check as the proofs finish
+            all_results = await asyncio.gather(*tasks)
             for idx, result in enumerate(all_results):
                 assert "response" in result, f"response #{idx} missing 'response' key"
                 if settings.LEAN_VERSION == "v4.15.0":

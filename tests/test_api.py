@@ -294,3 +294,173 @@ async def test_check_trailing_slash(client: TestClient) -> None:
     assert resp.status_code == status.HTTP_200_OK
 
     assert "messages" in resp.json()["response"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "client",
+    [
+        {"MAX_REPLS": 1, "MAX_USES": 1, "INIT_REPLS": {}, "DATABASE_URL": None},
+    ],
+    indirect=True,
+)
+async def test_wrong_custom_id_on_check(client: TestClient) -> None:
+    payload = {
+        "snippet": {"custom_id": "check-nat", "code": "#check Nat"},
+        "debug": True,
+    }
+
+    resp = client.post("check", json=payload)
+    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "client",
+    [
+        {"MAX_REPLS": 1, "MAX_USES": 1, "INIT_REPLS": {}, "DATABASE_URL": None},
+    ],
+    indirect=True,
+)
+async def test_wrong_custom_id_on_checks(client: TestClient) -> None:
+    payload = {
+        "snippets": [
+            {"custom_id": "check-nat", "code": "#check Nat"},
+            {"custom_id": "check-deff1", "code": "import Mathlib\ndef f:= 1"},
+            {
+                "custom_id": "check-theo",
+                "code": "import Mathlib\ntheorem onepp : 1 + 1 = 2 := by rfl",
+            },
+        ],
+        "debug": True,
+    }
+    resp = client.post("checks", json=payload)
+    assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "client",
+    [
+        {"MAX_REPLS": 1, "MAX_USES": 1, "INIT_REPLS": {}, "DATABASE_URL": None},
+    ],
+    indirect=True,
+)
+async def test_infotree(client: TestClient) -> None:
+    payload = {
+        "snippet": {"id": "check-nat", "code": "theorem onepp : 1+1 = 2:= by rfl"},
+        "infotree": "original",
+    }
+    resp = client.post("check", json=payload)
+    expected = {
+        "id": "check-nat",
+        "time": 0.009034,
+        "response": {
+            "env": 5,
+            "infotree": [
+                {
+                    "node": {
+                        "stx": {
+                            "range": {
+                                "synthetic": False,
+                                "start": {"line": 1, "column": 26},
+                                "finish": {"line": 1, "column": 32},
+                            },
+                            "pp": "by rfl",
+                        },
+                        "name": "Lean.Parser.Term.byTactic",
+                        "goalsBefore": ["⊢ 1 + 1 = 2"],
+                        "goalsAfter": [],
+                    },
+                    "kind": "TacticInfo",
+                    "children": [
+                        {
+                            "node": {
+                                "stx": {
+                                    "range": {
+                                        "synthetic": False,
+                                        "start": {"line": 1, "column": 26},
+                                        "finish": {"line": 1, "column": 28},
+                                    },
+                                    "pp": "<failed to pretty print>",
+                                },
+                                "name": None,
+                                "goalsBefore": ["⊢ 1 + 1 = 2"],
+                                "goalsAfter": [],
+                            },
+                            "kind": "TacticInfo",
+                            "children": [
+                                {
+                                    "node": {
+                                        "stx": {
+                                            "range": {
+                                                "synthetic": False,
+                                                "start": {"line": 1, "column": 29},
+                                                "finish": {"line": 1, "column": 32},
+                                            },
+                                            "pp": "rfl",
+                                        },
+                                        "name": "Lean.Parser.Tactic.tacticSeq",
+                                        "goalsBefore": ["⊢ 1 + 1 = 2"],
+                                        "goalsAfter": [],
+                                    },
+                                    "kind": "TacticInfo",
+                                    "children": [
+                                        {
+                                            "node": {
+                                                "stx": {
+                                                    "range": {
+                                                        "synthetic": False,
+                                                        "start": {
+                                                            "line": 1,
+                                                            "column": 29,
+                                                        },
+                                                        "finish": {
+                                                            "line": 1,
+                                                            "column": 32,
+                                                        },
+                                                    },
+                                                    "pp": "rfl",
+                                                },
+                                                "name": "Lean.Parser.Tactic.tacticSeq1Indented",
+                                                "goalsBefore": ["⊢ 1 + 1 = 2"],
+                                                "goalsAfter": [],
+                                            },
+                                            "kind": "TacticInfo",
+                                            "children": [
+                                                {
+                                                    "node": {
+                                                        "stx": {
+                                                            "range": {
+                                                                "synthetic": False,
+                                                                "start": {
+                                                                    "line": 1,
+                                                                    "column": 29,
+                                                                },
+                                                                "finish": {
+                                                                    "line": 1,
+                                                                    "column": 32,
+                                                                },
+                                                            },
+                                                            "pp": "rfl",
+                                                        },
+                                                        "name": "Lean.Parser.Tactic.tacticRfl",
+                                                        "goalsBefore": ["⊢ 1 + 1 = 2"],
+                                                        "goalsAfter": [],
+                                                    },
+                                                    "kind": "TacticInfo",
+                                                    "children": [],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+        },
+    }
+
+    assert_json_equal(resp.json(), expected, ignore_keys=["time", "env"])

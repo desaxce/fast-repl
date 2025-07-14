@@ -1,6 +1,8 @@
-from typing import Any, Literal, NotRequired, Type, TypedDict
+from typing import Any, Literal, NotRequired, Type, TypeAlias, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+Infotree: TypeAlias = Literal["original", "synthetic"]
 
 
 # TODO: Separate schemas in schemas dir with separate files.
@@ -28,7 +30,7 @@ class VerifyResponse(BaseModel):
 class VerifyRequestBody(BaseModel):
     codes: list[Code]
     timeout: int = 300
-    infotree_type: str | None = None
+    infotree_type: Infotree | None = None
     disable_cache: bool = False
 
 
@@ -44,6 +46,7 @@ class Snippet(BaseModel):
 class Command(TypedDict):
     cmd: str
     env: NotRequired[int | None]
+    infotree: NotRequired[Infotree]
 
 
 class Pos(TypedDict):
@@ -90,7 +93,7 @@ class CommandResponse(TypedDict):
     messages: NotRequired[list[Message]]
     sorries: NotRequired[list[Sorry]]
     tactics: NotRequired[list[Tactic]]
-    infotree: NotRequired[dict[str, Any] | None]
+    infotree: NotRequired[Any]
 
 
 from typing import TypeVar
@@ -100,7 +103,6 @@ TS = TypeVar("TS", bound="ChecksRequest")
 U = TypeVar("U", bound="CheckResponse")
 
 
-# TODO: Check what REPL-level parallelism means - also check repl-level timeout
 class CheckResponse(BaseModel):
     id: str = Field(..., description="Identifier to trace the snippet")
     time: float = 0.0
@@ -128,9 +130,9 @@ class BaseRequest(BaseModel):
     reuse: bool = Field(
         True, description="Whether to attempt using a REPL if available"
     )
-    infotree: Literal["none", "original", "synthetic"] = Field(
-        "none",
-        description="Level of detail for the InfoTree: 'none' | 'original' | 'synthetic'",
+    infotree: Infotree | None = Field(
+        None,
+        description="Level of detail for the info tree: 'original' | 'synthetic'",
     )
 
 
@@ -145,6 +147,10 @@ class ChecksRequest(BaseRequest):
         arr = values.get("snippets")
         if not arr or len(arr) == 0:
             raise ValueError("`snippets` must be provided and non empty")
+
+        for i, snippet in enumerate(arr):
+            if not isinstance(snippet, dict) or "id" not in snippet:
+                raise ValueError(f"`snippets[{i}].id` is required")
 
         ids = set({s["id"] for s in arr})
         if len(ids) != len(arr):
