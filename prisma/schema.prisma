@@ -24,11 +24,11 @@ model Repl {
 }
 
 model Proof {
-    uuid        String  @id @default(uuid()) @db.Uuid
+    uuid        String  @id @default(uuid()) @db.Uuid // add created at
     id          String
     code        String
-    diagnostics Json?   @db.JsonB
-    response    Json?   @db.JsonB
+    diagnostics Json?   @db.JsonB // Extract cpu and mem
+    response    Json?   @db.JsonB // TODO: Add success boolean + last theorem in snippet (indexed on that) + messages of type errors
     time        Float
     error       String?
     repl_uuid   String  @db.Uuid

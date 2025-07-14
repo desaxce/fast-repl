@@ -61,7 +61,7 @@ class Repl:
         self.header_cmd_response: CheckResponse | None = None
 
         self.proc: Process | None = None
-        self.error_file = tempfile.TemporaryFile("w+", buffering=0)
+        self.error_file = tempfile.TemporaryFile("w+")
         self.max_memory_bytes = max_mem * 1024 * 1024
         self.max_uses = max_uses
 
