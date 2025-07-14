@@ -64,6 +64,7 @@ class Manager:
         header: str = "",
         snippet_id: str = "",
         timeout: float = settings.MAX_WAIT,
+        reuse: bool = True,
     ) -> Repl:
         """
         Async-safe way to get a `Repl` instance for a given header.
@@ -75,17 +76,18 @@ class Manager:
                 logger.info(
                     f"# Free = {len(self._free)} | # Busy = {len(self._busy)} | # Max = {self.max_repls}"
                 )
-                for i, r in enumerate(self._free):
-                    if (
-                        r.header == header
-                    ):  # repl shouldn't be exhausted (max age to check)
-                        repl = self._free.pop(i)
-                        self._busy.add(repl)
+                if reuse:
+                    for i, r in enumerate(self._free):
+                        if (
+                            r.header == header
+                        ):  # repl shouldn't be exhausted (max age to check)
+                            repl = self._free.pop(i)
+                            self._busy.add(repl)
 
-                        logger.info(
-                            f"\\[{repl.uuid.hex[:8]}] Reusing ({"started" if repl.is_running else "non-started"}) REPL for {snippet_id}"
-                        )
-                        return repl
+                            logger.info(
+                                f"\\[{repl.uuid.hex[:8]}] Reusing ({"started" if repl.is_running else "non-started"}) REPL for {snippet_id}"
+                            )
+                            return repl
                 total = len(self._free) + len(self._busy)
                 if total < self.max_repls:
                     return await self.start_new(header)

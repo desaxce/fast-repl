@@ -21,15 +21,12 @@ def get_manager(request: Request) -> Manager:
 
 
 async def run_checks(
-    snippets: list[Snippet],
-    timeout: float,
-    debug: bool,
-    manager: Manager,
+    snippets: list[Snippet], timeout: float, debug: bool, manager: Manager, reuse: bool
 ) -> list[CheckResponse]:
     async def run_one(snippet: Snippet) -> CheckResponse:
         header, body = split_snippet(snippet.code)
         try:
-            repl = await manager.get_repl(header, snippet.id)
+            repl = await manager.get_repl(header, snippet.id, reuse=reuse)
         except NoAvailableReplError:
             logger.exception("No available REPLs")
             raise HTTPException(429, "No available REPLs") from None
@@ -149,10 +146,7 @@ async def check_batch(
     manager: Manager = Depends(get_manager),
 ) -> list[CheckResponse]:
     return await run_checks(
-        request.snippets,
-        float(request.timeout),
-        request.debug,
-        manager,
+        request.snippets, float(request.timeout), request.debug, manager, request.reuse
     )
 
 
@@ -172,9 +166,6 @@ async def check_single(
     manager: Manager = Depends(get_manager),
 ) -> CheckResponse:
     resp_list = await run_checks(
-        [request.snippet],
-        float(request.timeout),
-        request.debug,
-        manager,
+        [request.snippet], float(request.timeout), request.debug, manager, request.reuse
     )
     return resp_list[0]

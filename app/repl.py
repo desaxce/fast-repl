@@ -106,7 +106,8 @@ class Repl:
 
     @property
     def exhausted(self) -> bool:
-        if self.header and not is_blank(self.header):  # TODO: fix this header part
+        if self.header and not is_blank(self.header):
+            # Header does not count towards uses.
             return self.use_count >= self.max_uses + 1
         return self.use_count >= self.max_uses
 
@@ -124,7 +125,7 @@ class Repl:
                 )
 
             # No CPU limit on REPL, most Lean proofs take up to one core.
-            # The adjustment variable is the maximum number of REPLs / timeout.
+            # The adjustment variables are the maximum number of REPLs and the timeout.
             # See https://github.com/leanprover-community/repl/issues/91
 
             os.setsid()

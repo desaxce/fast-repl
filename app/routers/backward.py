@@ -28,8 +28,10 @@ async def one_pass_verify_batch(
 
     timeout = body.timeout
     debug = False
+    reuse = not body.disable_cache
 
-    checks_response = await run_checks(snippets, float(timeout), debug, manager)
+    checks_response = await run_checks(snippets, float(timeout), debug, manager, reuse)
+
     results: list[BackwardResponse] = []
 
     for resp in checks_response:
