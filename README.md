@@ -8,6 +8,7 @@ Resource limits only work on Linux.
 ## Usage
 
 ```python
+uv run prisma generate
 uv run uvicorn app.main:app
 ```
 
