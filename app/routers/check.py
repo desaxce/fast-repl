@@ -5,6 +5,7 @@ from typing import cast
 from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 
+from app.auth import require_key
 from app.db import db
 from app.errors import NoAvailableReplError
 from app.manager import Manager
@@ -176,6 +177,7 @@ async def check_batch(
 async def check_single(
     request: CheckRequest,
     manager: Manager = Depends(get_manager),
+    _: str = Depends(require_key),
 ) -> CheckResponse:
     resp_list = await run_checks(
         [request.snippet],

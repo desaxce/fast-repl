@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://root:root@localhost:5432/fastrepl"
 
     LEAN_VERSION: str = "v4.15.0"
+    API_KEY: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

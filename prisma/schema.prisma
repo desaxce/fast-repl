@@ -21,6 +21,9 @@ model Repl {
     header     String
     status     ReplStatus @default(RUNNING)
     proofs     Proof[]
+
+    @@index([status])
+    @@index([status, created_at(sort: Desc)])
 }
 
 model Proof {
@@ -33,4 +36,15 @@ model Proof {
     error       String?
     repl_uuid   String  @db.Uuid
     repl        Repl    @relation(fields: [repl_uuid], references: [uuid])
+
+    @@unique([id])
+    @@index([repl_uuid])
+}
+
+model ApiKey {
+    id         String   @id //@default(dbgenerated("gen_random_uuid()"))
+    created_at DateTime @default(now())
+    key        String   @unique
+
+    @@index([key])
 }

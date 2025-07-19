@@ -35,8 +35,6 @@ services:
   #     - INIT_REPLS={}
   #     - DATABASE_HOST=${DATABASE_HOST}
   #     - DATABASE_URL=${DATABASE_URL}
-  #   volumes:
-  #     - ./data:/app/data      # for a small SQLite file -> to remove
   #   healthcheck:
   #     test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
   #     interval: 10s

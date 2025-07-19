@@ -1,26 +1,30 @@
-# # app/auth.py
-# import os
-# from fastapi import HTTPException, Security
-# from fastapi.security.api_key import APIKeyHeader
-# from sqlalchemy import create_engine, Table, Column, String, MetaData, select
+from fastapi import HTTPException, Security
+from fastapi.security.api_key import APIKeyHeader
+from loguru import logger
 
-# API_KEY = os.getenv("API_KEY") or ""
-# engine = create_engine("sqlite:///data/keys.db")
-# metadata = MetaData()
-# keys = Table("keys", metadata, Column("key", String, primary_key=True))
-# metadata.create_all(engine)
+from app.settings import settings
 
-# def seed_key():
-#     with engine.begin() as conn:
-#         if not conn.execute(select(keys)).first():
-#             conn.execute(keys.insert().values(key=API_KEY))
+api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 
-# api_key_header = APIKeyHeader(name="Authorization")
+# TODO: Implement key in db once ready
+# async def seed_key():
+#     if db.connected:
+#     existing = await db.client.api_key.find_first()
+#     if not existing:
+#         await db.client.api_key.create(data={"key": API_KEY})
 
-# async def require_key(auth: str = Security(api_key_header)):
-#     token = auth.removeprefix("Bearer ").strip()
-#     with engine.connect() as conn:
-#         row = conn.execute(select(keys).where(keys.c.key == token)).first()
-#     if not row:
-#         raise HTTPException(401, "Invalid API key")
-#     return token
+
+async def require_key(auth: str = Security(api_key_header)) -> str | None:
+    if settings.API_KEY is None:
+        return None
+
+    if not auth:
+        raise HTTPException(401, "Missing API key")
+
+    logger.info(f"Received auth header: {auth}")
+    token = auth.removeprefix("Bearer ").strip()
+    # found = await db.client.api_key.find_unique(where={"key": token})
+    logger.info("ALL GOOD")
+    if not token == settings.API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    return token
