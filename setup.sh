@@ -31,6 +31,12 @@ git checkout ${LEAN_VERSION}
 lake build
 popd
 
+modify_lake_manifest() {
+    local manifest_file="$1/lake-manifest.json"
+    jq '.packages |= map(.type = "path" | del(.url) | .dir = ".lake/packages/" + .name)' \
+        "$manifest_file" > "$manifest_file.tmp" && mv "$manifest_file.tmp" "$manifest_file"
+}
+
 # Install Mathlib
 echo "Installing Mathlib..."
 if [ ! -d "mathlib4" ]; then
@@ -39,4 +45,5 @@ fi
 pushd mathlib4
 git checkout ${LEAN_VERSION}
 lake exe cache get && lake build
+modify_lake_manifest "$(pwd)"
 popd
